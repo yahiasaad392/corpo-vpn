@@ -37,7 +37,7 @@ export default function Settings() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white">Application Settings</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Configure your Nexus Corporate Connect experience</p>
+          <p className="text-sm text-slate-500 mt-0.5">Configure your Corpo VPN experience</p>
         </div>
 
         <div className="space-y-8">
@@ -122,7 +122,7 @@ export default function Settings() {
             <div className="space-y-2">
               <ToggleSwitch
                 label="Launch on System Startup"
-                description="Start Corporate Connect automatically with Windows/macOS"
+                description="Start Corpo VPN automatically with Windows/macOS"
                 icon="🚀"
                 enabled={settings.startOnBoot}
                 onToggle={() => toggle('startOnBoot')}
@@ -183,7 +183,7 @@ export default function Settings() {
             <div className="space-y-2">
               <ToggleSwitch
                 label="Anonymous Usage Reports"
-                description="Help improve Corporate Connect with diagnostic logs (no personal data)"
+                description="Help improve Corpo VPN with diagnostic logs (no personal data)"
                 icon="📊"
                 enabled={settings.analytics}
                 onToggle={() => toggle('analytics')}
@@ -191,14 +191,14 @@ export default function Settings() {
             </div>
             <div className="mt-4 p-3 rounded-xl bg-green-500/8 border border-green-500/15">
               <p className="text-xs text-green-300">
-                ✓ Nexus Corporate Connect enforces a strict zero-log policy. Your browsing activity is never recorded.
+                ✓ Corpo VPN enforces a strict zero-log policy. Your browsing activity is never recorded.
               </p>
             </div>
           </div>
 
           {/* Version info */}
           <div className="text-center text-xs text-slate-700 pb-4">
-             Nexus Corporate Connect v4.2.0-stable · Build 2026.02.24 · Corporate License
+             Corpo VPN v4.2.0-stable · Build 2026.03.04 · Enterprise License
           </div>
         </div>
       </div>

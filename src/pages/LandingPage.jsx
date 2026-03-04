@@ -44,7 +44,7 @@ function InstallerModal({ os, onComplete }) {
         <div className="h-8 bg-gradient-to-b from-slate-100 to-slate-200 border-b border-slate-300 flex items-center justify-between px-3 shrink-0">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-blue-600" />
-            <span className="text-[11px] font-medium">Corporate Connect Setup ({os})</span>
+            <span className="text-[11px] font-medium">Corpo VPN Setup ({os})</span>
           </div>
           <div className="flex gap-1.5 opacity-50">
             <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
@@ -61,7 +61,7 @@ function InstallerModal({ os, onComplete }) {
           <div className="flex-1 space-y-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900 leading-tight">Installing Gateway Access</h3>
-              <p className="text-sm text-slate-500 mt-1">Please wait while the setup wizard installs Nexus Corporate Connect on your system.</p>
+              <p className="text-sm text-slate-500 mt-1">Please wait while the setup wizard installs Corpo VPN on your system.</p>
             </div>
 
             <div className="space-y-2">
@@ -107,7 +107,7 @@ function DashboardMockup() {
           <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
           <div className="flex-1 flex justify-center">
-            <div className="text-xs text-slate-500 font-mono">Corporate Connect — HQ Dashboard</div>
+              <div className="text-xs text-slate-500 font-mono">Corpo VPN — HQ Dashboard</div>
           </div>
         </div>
         {/* App body */}
@@ -229,7 +229,7 @@ export default function LandingPage() {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-glow-cyan">
             <Shield size={15} className="text-white" />
           </div>
-          <span className="font-bold text-white text-lg tracking-tight">Corporate Connect</span>
+          <span className="font-bold text-white text-lg tracking-tight">Corpo VPN</span>
         </div>
         <div className="hidden md:flex items-center gap-6 text-sm text-slate-400">
           {['Compliance', 'HQ Network', 'Enterprise', 'Support'].map(l => (
@@ -264,7 +264,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in">
-          Corporate Connect provides encrypted access to company headquarters and internal resources. 
+          Corpo VPN provides encrypted access to company headquarters and internal resources. 
           Deploy the standalone desktop application to begin secure operations.
         </p>
 
@@ -287,7 +287,7 @@ export default function LandingPage() {
       {/* Download Section */}
       <section className="px-6 py-16 border-t border-white/5">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-3">Get Corporate Connect</h2>
+          <h2 className="text-3xl font-bold text-white mb-3">Get Corpo VPN</h2>
           <p className="text-slate-500 mb-10">Deploy to your workstation for secure remote work access.</p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -327,7 +327,7 @@ export default function LandingPage() {
                 Installation Successful!
               </div>
               <p className="text-slate-400 text-sm mb-6">
-                Nexus Corporate Connect setup has been verified. <br />
+                Corpo VPN setup has been verified. <br />
                 <strong>Production Installer Path:</strong> <code className="text-cyan-400">/dist-electron/NexusVPN Setup 1.0.0.exe</code>
               </p>
               <div className="flex flex-col gap-3">
@@ -352,7 +352,7 @@ export default function LandingPage() {
       <section className="px-6 py-16 border-t border-white/5">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3">Why Corporate Connect?</h2>
+            <h2 className="text-3xl font-bold text-white mb-3">Why Corpo VPN?</h2>
             <p className="text-slate-500">Industry-leading secure access for the modern distributed workforce.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -394,7 +394,7 @@ export default function LandingPage() {
             transition-all duration-300 shadow-xl"
         >
           <Building2 size={22} />
-          Start Corporate Session
+          Start Secure Session
           <ArrowRight size={18} />
         </button>
       </section>
@@ -403,7 +403,7 @@ export default function LandingPage() {
       <footer className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Shield size={14} className="text-cyan-500" />
-          <span className="text-sm text-slate-600">© 2026 Corporate Connect. Internal Use Only.</span>
+          <span className="text-sm text-slate-600">© 2026 Corpo VPN. Internal Use Only.</span>
         </div>
         <div className="flex gap-6 text-xs text-slate-700">
           {['Privacy Policy', 'Terms of Service', 'Contact', 'Status'].map(l => (

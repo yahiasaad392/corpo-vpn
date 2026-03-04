@@ -1,8 +1,8 @@
 {
-  "name": "nexusvpn",
+  "name": "corpo-vpn",
   "version": "1.0.0",
-  "description": "Secure HQ Gateway access for corporate headquarters.",
-  "author": "Corporate IT",
+  "description": "Corpo VPN — Secure enterprise VPN for your organization.",
+  "author": "Corpo VPN Team",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -31,8 +31,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.nexusvpn.app",
-    "productName": "Nexus Corporate Connect",
+    "appId": "com.corpovpn.app",
+    "productName": "Corpo VPN",
     "directories": {
       "output": "dist-electron"
     },
@@ -44,7 +44,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Nexus Corporate Connect"
+      "shortcutName": "Corpo VPN"
     },
     "files": [
       "dist/**/*",

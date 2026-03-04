@@ -20,7 +20,7 @@ export default function AppShell() {
         <div className="h-10 bg-dark-900/80 border-b border-white/5 flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-cyan-500" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Corporate Connect — Secure HQ Tunnel</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Corpo VPN — Secure HQ Tunnel</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="p-1.5 hover:bg-white/5 rounded-md transition-colors cursor-pointer">
@@ -47,8 +47,8 @@ export default function AppShell() {
                 <Shield className="text-white w-6 h-6" />
               </div>
               <div>
-                <h1 className="font-bold text-lg tracking-tight text-white leading-none">Nexus</h1>
-                <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-semibold">Corporate Connect</span>
+                <h1 className="font-bold text-lg tracking-tight text-white leading-none">Corpo</h1>
+                <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-semibold">VPN Gateway</span>
               </div>
             </div>
 
