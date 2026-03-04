@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Shield, ShieldCheck, ShieldAlert, ShieldX,
   ScanLine, CheckCircle, XCircle, AlertTriangle,
-  Monitor, HardDrive, Wifi, Lock, ChevronRight,
+  Monitor, HardDrive, Wifi, Lock, Key, ChevronRight,
   Loader2, Eye, EyeOff
 } from 'lucide-react'
 
@@ -131,10 +131,15 @@ function ScanningPhase() {
 
         {/* Progress items */}
         <div className="w-80 space-y-2">
-          {['Checking antivirus products...', 'Verifying OS build version...', 'Analyzing system resources...'].map((item, i) => (
-            <div key={item} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5">
+          {[
+            { label: 'Checking antivirus products...' },
+            { label: 'Checking BitLocker encryption...' },
+            { label: 'Verifying OS build version...' },
+            { label: 'Analyzing system resources...' },
+          ].map((item, i) => (
+            <div key={item.label} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5">
               <Loader2 size={14} className="text-cyan-400 animate-spin shrink-0" style={{ animationDelay: `${i * 0.3}s` }} />
-              <span className="text-sm text-slate-400 font-mono">{item}</span>
+              <span className="text-sm text-slate-400 font-mono">{item.label}</span>
             </div>
           ))}
         </div>
@@ -156,6 +161,17 @@ function ResultsPhase({ results, onProceed, onRetry }) {
       detail: results.antivirus.pass
         ? `${results.antivirus.products.map(p => p.name).join(', ')}`
         : 'No antivirus detected — Connection will be blocked',
+    },
+    {
+      key: 'bitlocker',
+      icon: Key,
+      label: 'BitLocker Disk Encryption',
+      pass: results.bitlocker?.pass ?? false,
+      detail: results.bitlocker?.pass
+        ? `C: drive is encrypted and protected`
+        : results.bitlocker?.error
+          ? 'BitLocker query failed — ensure you have admin rights'
+          : 'C: drive is NOT encrypted — Enable BitLocker in Windows Settings',
     },
     {
       key: 'os',
@@ -317,10 +333,11 @@ export default function ComplianceCheck() {
     if (!window.electronAPI?.runComplianceCheck) {
       await new Promise(r => setTimeout(r, 2800))
       setResults({
-        os:       { pass: true,  label: 'Windows 11', release: '10.0.22631' },
-        antivirus:{ pass: true,  products: [{ name: 'Windows Defender', enabled: true }] },
-        disk:     { pass: true,  freeGb: 8 },
-        overall:  true,
+        os:        { pass: true,  label: 'Windows 11', release: '10.0.22631' },
+        antivirus: { pass: true,  products: [{ name: 'Windows Defender', enabled: true }] },
+        bitlocker: { pass: true,  enabled: true, drives: [{ mountPoint: 'C:', protected: true, encryptionPct: 100 }], error: false },
+        disk:      { pass: true,  freeGb: 8 },
+        overall:   true,
       })
       setPhase('results')
       return

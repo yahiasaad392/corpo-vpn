@@ -59,6 +59,37 @@ function runAntivirusQuery() {
   })
 }
 
+function runBitLockerQuery() {
+  return new Promise((resolve) => {
+    // Query BitLocker protection status for all drives
+    const cmd = `powershell -NoProfile -Command "Get-BitLockerVolume | Select-Object MountPoint,ProtectionStatus,EncryptionPercentage | ConvertTo-Json -Compress"`
+    exec(cmd, { timeout: 8000 }, (err, stdout, stderr) => {
+      if (err || !stdout.trim()) {
+        resolve({ enabled: false, drives: [], error: true })
+        return
+      }
+      try {
+        let data = JSON.parse(stdout.trim())
+        if (!Array.isArray(data)) data = [data]
+        const drives = data.map(d => ({
+          mountPoint: d.MountPoint,
+          // ProtectionStatus: 0 = Off, 1 = On
+          protected: d.ProtectionStatus === 1,
+          encryptionPct: d.EncryptionPercentage ?? 0,
+        }))
+        const systemDrive = drives.find(d => d.mountPoint === 'C:') || drives[0]
+        resolve({
+          enabled: systemDrive ? systemDrive.protected : false,
+          drives,
+          error: false,
+        })
+      } catch {
+        resolve({ enabled: false, drives: [], error: true })
+      }
+    })
+  })
+}
+
 // ─────────────────────────────────────────────────────────────
 // IPC HANDLER: compliance:run
 // ─────────────────────────────────────────────────────────────
@@ -66,9 +97,12 @@ function runAntivirusQuery() {
 ipcMain.handle('compliance:run', async () => {
   const osInfo   = getOsInfo()
   const osBuild  = checkWindowsBuild(osInfo.release)
-  const avResult = await runAntivirusQuery()
+  const [avResult, blResult] = await Promise.all([
+    runAntivirusQuery(),
+    runBitLockerQuery(),
+  ])
 
-  const diskFreeGb = osInfo.freeMem  // approximation; accurate enough for UX
+  const diskFreeGb = osInfo.freeMem
   const ramTotalGb = osInfo.totalMem
 
   return {
@@ -84,12 +118,18 @@ ipcMain.handle('compliance:run', async () => {
       products: avResult.products,
       pass:     avResult.found,
     },
+    bitlocker: {
+      enabled: blResult.enabled,
+      drives:  blResult.drives,
+      pass:    blResult.enabled,
+      error:   blResult.error,
+    },
     disk: {
       freeGb:  diskFreeGb,
       totalGb: ramTotalGb,
       pass:    diskFreeGb >= 2,
     },
-    overall: osBuild.pass && avResult.found && diskFreeGb >= 2,
+    overall: osBuild.pass && avResult.found && blResult.enabled && diskFreeGb >= 2,
   }
 })
 
