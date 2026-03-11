@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ToggleSwitch from '../components/ToggleSwitch'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Save, CheckCircle, Key, Wifi, AlertTriangle } from 'lucide-react'
 
 const PROTOCOLS = ['WireGuard', 'OpenVPN (UDP)', 'OpenVPN (TCP)', 'IKEv2']
 
@@ -29,7 +29,58 @@ export default function Settings() {
   const [protocolOpen, setProtocolOpen] = useState(false)
   const [startup, setStartup] = useState('minimize')
 
+  // WireGuard config state
+  const [wgPrivateKey, setWgPrivateKey] = useState('')
+  const [wgClientIp, setWgClientIp] = useState('10.10.0.3')
+  const [configSaved, setConfigSaved] = useState(false)
+  const [configError, setConfigError] = useState(null)
+
+  const isElectron = !!window.electronAPI?.vpnSaveConfig
+
+  // Load saved config on mount
+  useEffect(() => {
+    if (isElectron && window.electronAPI?.vpnLoadConfig) {
+      window.electronAPI.vpnLoadConfig().then(config => {
+        if (config) {
+          if (config.privateKey) setWgPrivateKey(config.privateKey)
+          if (config.clientIp)   setWgClientIp(config.clientIp)
+        }
+      })
+    }
+  }, [isElectron])
+
   const toggle = key => setSettings(s => ({ ...s, [key]: !s[key] }))
+
+  const handleSaveWgConfig = async () => {
+    setConfigError(null)
+    setConfigSaved(false)
+
+    if (!wgPrivateKey.trim()) {
+      setConfigError('Private key is required')
+      return
+    }
+    if (!wgClientIp.trim()) {
+      setConfigError('Client IP is required')
+      return
+    }
+
+    if (isElectron) {
+      const res = await window.electronAPI.vpnSaveConfig({
+        privateKey: wgPrivateKey.trim(),
+        clientIp: wgClientIp.trim(),
+      })
+      if (res.success) {
+        setConfigSaved(true)
+        setTimeout(() => setConfigSaved(false), 3000)
+      } else {
+        setConfigError(res.error)
+      }
+    } else {
+      // Browser mode — just show success
+      setConfigSaved(true)
+      setTimeout(() => setConfigSaved(false), 3000)
+    }
+  }
 
   return (
     <div className="h-full overflow-y-auto px-8 py-8">
@@ -41,6 +92,83 @@ export default function Settings() {
         </div>
 
         <div className="space-y-8">
+
+          {/* WIREGUARD CONFIG — NEW */}
+          <div className="glass-card p-6 border-cyan-500/20">
+            <SectionHeader title="🔑 WireGuard Configuration" description="Enter your client credentials to connect to the VPN server" />
+            
+            <div className="space-y-4">
+              {/* Server info (read-only) */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Server Details (pre-configured)</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><span className="text-slate-500">Endpoint:</span> <span className="text-cyan-400 font-mono">80.65.211.27:51820</span></div>
+                  <div><span className="text-slate-500">Protocol:</span> <span className="text-cyan-400 font-mono">WireGuard</span></div>
+                  <div><span className="text-slate-500">DNS:</span> <span className="text-cyan-400 font-mono">1.1.1.1</span></div>
+                  <div><span className="text-slate-500">Routing:</span> <span className="text-cyan-400 font-mono">0.0.0.0/0 (all traffic)</span></div>
+                </div>
+              </div>
+
+              {/* Client Private Key */}
+              <div>
+                <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
+                  <Key size={12} className="text-cyan-500" />
+                  Client Private Key
+                </label>
+                <input
+                  type="password"
+                  value={wgPrivateKey}
+                  onChange={e => setWgPrivateKey(e.target.value)}
+                  placeholder="Paste your WireGuard private key..."
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono 
+                    placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                />
+                <p className="text-[10px] text-slate-600 mt-1">Generated on the server with `wg genkey`. Never share this key.</p>
+              </div>
+
+              {/* Client IP */}
+              <div>
+                <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
+                  <Wifi size={12} className="text-cyan-500" />
+                  Client VPN IP Address
+                </label>
+                <input
+                  type="text"
+                  value={wgClientIp}
+                  onChange={e => setWgClientIp(e.target.value)}
+                  placeholder="e.g., 10.10.0.3"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono 
+                    placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                />
+                <p className="text-[10px] text-slate-600 mt-1">Assigned by your server admin. Must be in the 10.10.0.2 - 10.10.0.254 range.</p>
+              </div>
+
+              {/* Error */}
+              {configError && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <AlertTriangle size={14} className="text-red-400" />
+                  <span className="text-xs text-red-300">{configError}</span>
+                </div>
+              )}
+
+              {/* Save Button */}
+              <button
+                onClick={handleSaveWgConfig}
+                className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300
+                  ${configSaved 
+                    ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
+                    : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 hover:shadow-[0_0_20px_rgba(0,245,255,0.2)]'
+                  }`}
+              >
+                {configSaved ? (
+                  <><CheckCircle size={16} /> Configuration Saved!</>
+                ) : (
+                  <><Save size={16} /> Save WireGuard Config</>
+                )}
+              </button>
+            </div>
+          </div>
+
           {/* CONNECTION */}
           <div className="glass-card p-6">
             <SectionHeader title="Connection" description="VPN connection behaviour settings" />
@@ -87,7 +215,7 @@ export default function Settings() {
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-neon-cyan">{protocol}</span>
                     {protocol === 'WireGuard' && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-neon-green/15 text-neon-green border border-neon-green/25">Recommended</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-neon-green/15 text-neon-green border border-neon-green/25">Active</span>
                     )}
                   </div>
                   <ChevronDown
@@ -179,7 +307,7 @@ export default function Settings() {
 
           {/* PRIVACY */}
           <div className="glass-card p-6">
-            <SectionHeader title="Privacy & Analytics" description="Control what data NexusVPN collects" />
+            <SectionHeader title="Privacy & Analytics" description="Control what data Corpo VPN collects" />
             <div className="space-y-2">
               <ToggleSwitch
                 label="Anonymous Usage Reports"
@@ -198,7 +326,7 @@ export default function Settings() {
 
           {/* Version info */}
           <div className="text-center text-xs text-slate-700 pb-4">
-             Corpo VPN v4.2.0-stable · Build 2026.03.04 · Enterprise License
+             Corpo VPN v4.2.0-stable · Build 2026.03.11 · Enterprise License
           </div>
         </div>
       </div>

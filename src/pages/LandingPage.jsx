@@ -378,26 +378,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-6 py-20 text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">Secure Your Remote Workforce Today</h2>
-        <p className="text-slate-500 mb-8 max-w-xl mx-auto">
-          Scale your enterprise security with our zero-trust access gateway.
-        </p>
-        <button
-          onClick={() => navigate('/app/dashboard')}
-          className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl 
-            bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600
-            text-white text-lg font-bold
-            hover:from-cyan-400 hover:to-purple-500
-            hover:shadow-glow-cyan hover:scale-105
-            transition-all duration-300 shadow-xl"
-        >
-          <Building2 size={22} />
-          Start Secure Session
-          <ArrowRight size={18} />
-        </button>
-      </section>
 
       {/* Footer */}
       <footer className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">

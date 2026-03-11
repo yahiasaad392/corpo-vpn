@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Shield, ShieldCheck, ShieldAlert, ShieldX,
   ScanLine, CheckCircle, XCircle, AlertTriangle,
-  Monitor, HardDrive, Wifi, Lock, Key, ChevronRight,
+  Monitor, HardDrive, Wifi, Lock, ChevronRight,
   Loader2, Eye, EyeOff
 } from 'lucide-react'
 
@@ -133,7 +133,6 @@ function ScanningPhase() {
         <div className="w-80 space-y-2">
           {[
             { label: 'Checking antivirus products...' },
-            { label: 'Checking BitLocker encryption...' },
             { label: 'Verifying OS build version...' },
             { label: 'Analyzing system resources...' },
           ].map((item, i) => (
@@ -161,17 +160,6 @@ function ResultsPhase({ results, onProceed, onRetry }) {
       detail: results.antivirus.pass
         ? `${results.antivirus.products.map(p => p.name).join(', ')}`
         : 'No antivirus detected — Connection will be blocked',
-    },
-    {
-      key: 'bitlocker',
-      icon: Key,
-      label: 'BitLocker Disk Encryption',
-      pass: results.bitlocker?.pass ?? false,
-      detail: results.bitlocker?.pass
-        ? `C: drive is encrypted and protected`
-        : results.bitlocker?.error
-          ? 'BitLocker query failed — ensure you have admin rights'
-          : 'C: drive is NOT encrypted — Enable BitLocker in Windows Settings',
     },
     {
       key: 'os',
@@ -335,7 +323,6 @@ export default function ComplianceCheck() {
       setResults({
         os:        { pass: true,  label: 'Windows 11', release: '10.0.22631' },
         antivirus: { pass: true,  products: [{ name: 'Windows Defender', enabled: true }] },
-        bitlocker: { pass: true,  enabled: true, drives: [{ mountPoint: 'C:', protected: true, encryptionPct: 100 }], error: false },
         disk:      { pass: true,  freeGb: 8 },
         overall:   true,
       })
@@ -353,10 +340,10 @@ export default function ComplianceCheck() {
       console.error('Compliance check failed:', err)
       // Graceful fallback — assume failure
       setResults({
-        os:       { pass: false, label: 'Unknown', release: '0.0.0' },
-        antivirus:{ pass: false, products: [] },
-        disk:     { pass: false, freeGb: 0 },
-        overall:  false,
+        os:        { pass: false, label: 'Unknown', release: '0.0.0' },
+        antivirus: { pass: false, products: [] },
+        disk:      { pass: false, freeGb: 0 },
+        overall:   false,
       })
       setPhase('results')
     }
