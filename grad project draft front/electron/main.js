@@ -708,8 +708,10 @@ ipcMain.handle('vpn:status', async () => {
 // WINDOW
 // ─────────────────────────────────────────────────────────────
 
+let mainWindow = null
+
 function createWindow() {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 1100,
@@ -724,13 +726,44 @@ function createWindow() {
     },
   })
 
+  // Notify renderer when maximize state changes (e.g. via double-click titlebar, Windows snap)
+  mainWindow.on('maximize', () => {
+    mainWindow.webContents.send('window:maximized-change', true)
+  })
+  mainWindow.on('unmaximize', () => {
+    mainWindow.webContents.send('window:maximized-change', false)
+  })
+
   if (isDev) {
-    win.loadURL('http://localhost:5173')
-    win.webContents.openDevTools({ mode: 'detach' })
+    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'))
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 }
+
+// ─── Window Control IPC ──────────────────────────────────────
+
+ipcMain.on('window:minimize', () => {
+  if (mainWindow) mainWindow.minimize()
+})
+
+ipcMain.on('window:maximize', () => {
+  if (!mainWindow) return
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize()
+  } else {
+    mainWindow.maximize()
+  }
+})
+
+ipcMain.on('window:close', () => {
+  if (mainWindow) mainWindow.close()
+})
+
+ipcMain.handle('window:is-maximized', () => {
+  return mainWindow ? mainWindow.isMaximized() : false
+})
 
 app.whenReady().then(() => {
   createWindow()

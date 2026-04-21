@@ -151,3 +151,28 @@
   background-size: 200% 100%;
   animation: shimmer 2.5s linear infinite;
 }
+
+/* ── Electron Titlebar — Draggable Window Region ── */
+.titlebar {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Window control buttons must NOT be draggable */
+.titlebar .window-controls,
+.titlebar .window-controls * {
+  -webkit-app-region: no-drag;
+}
+
+/* Auth page titlebar button hovers (inline styled buttons) */
+.titlebar-btn-hover:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.titlebar-btn-close:hover {
+  background: #e81123 !important;
+}
+.titlebar-btn-close:hover svg {
+  color: #fff !important;
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Shield, Minus, Square, X, Copy } from 'lucide-react'
 
 const API = 'http://127.0.0.1:3001/api/auth'
 const POLICY_API = 'http://127.0.0.1:3001/api/policy'
@@ -14,6 +15,17 @@ export default function Auth() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [isMaximized, setIsMaximized] = useState(false)
+
+  // ── Track maximize state for window controls ──
+  useEffect(() => {
+    if (!window.electronAPI) return
+    window.electronAPI.windowIsMaximized().then(setIsMaximized)
+    const cleanup = window.electronAPI.onMaximizedChange((maximized) => {
+      setIsMaximized(maximized)
+    })
+    return cleanup
+  }, [])
 
   // Check if already logged in
   useEffect(() => {
@@ -247,19 +259,55 @@ export default function Auth() {
   }
 
   return (
-    <div style={styles.page}>
-      {/* Animated background */}
-      <div style={styles.bgGlow} />
-
-      <div style={styles.card}>
-        {/* Logo */}
-        <div style={styles.logoWrap}>
-          <div style={styles.logoIcon}>🔐</div>
-          <h1 style={styles.title}>Corpo VPN</h1>
-          <p style={styles.subtitle}>
-            {step === 'otp' ? 'Enter verification code' : step === 'register' ? 'Create your account' : 'Sign in to continue'}
-          </p>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#060818' }}>
+      {/* ─── Native Titlebar ─── */}
+      <div className="titlebar" style={{
+        height: 36, background: '#080a1e', borderBottom: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 12,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
+          <Shield size={13} style={{ color: '#06b6d4' }} />
+          <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b' }}>
+            Corpo VPN — Sign In
+          </span>
         </div>
+        <div className="window-controls" style={{ display: 'flex' }}>
+          <button onClick={() => window.electronAPI?.windowMinimize()}
+            style={{ width: 44, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer' }}
+            className="titlebar-btn-hover" title="Minimize">
+            <Minus size={14} style={{ color: '#94a3b8' }} />
+          </button>
+          <button onClick={() => window.electronAPI?.windowMaximize()}
+            style={{ width: 44, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer' }}
+            className="titlebar-btn-hover" title={isMaximized ? 'Restore' : 'Maximize'}>
+            {isMaximized
+              ? <Copy size={12} style={{ color: '#94a3b8' }} />
+              : <Square size={11} style={{ color: '#94a3b8' }} />
+            }
+          </button>
+          <button onClick={() => window.electronAPI?.windowClose()}
+            style={{ width: 44, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer' }}
+            className="titlebar-btn-close" title="Close">
+            <X size={14} style={{ color: '#94a3b8' }} />
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Auth Content ─── */}
+      <div style={{ ...styles.page, flex: 1, minHeight: 0 }}>
+        {/* Animated background */}
+        <div style={styles.bgGlow} />
+
+        <div style={styles.card}>
+          {/* Logo */}
+          <div style={styles.logoWrap}>
+            <div style={styles.logoIcon}>🔐</div>
+            <h1 style={styles.title}>Corpo VPN</h1>
+            <p style={styles.subtitle}>
+              {step === 'otp' ? 'Enter verification code' : step === 'register' ? 'Create your account' : 'Sign in to continue'}
+            </p>
+          </div>
 
         {/* Messages */}
         {error && <div style={styles.errorBox}>{error}</div>}
@@ -455,6 +503,7 @@ export default function Auth() {
             </p>
           </form>
         )}
+      </div>
       </div>
     </div>
   )

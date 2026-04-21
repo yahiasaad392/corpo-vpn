@@ -32,7 +32,7 @@ A full-stack **corporate VPN desktop application** (graduation project).
 d:\Users\pc\Desktop\full stack grad project draft\grad project draft front\
 ├── electron\
 │   ├── main.js          ← Electron main process: WireGuard tunnel + 30-check compliance IPC
-│   └── preload.js       ← Exposes window.electronAPI to React
+│   └── preload.js       ← Exposes window.electronAPI to React (window controls + compliance + VPN)
 ├── src\
 │   ├── App.jsx          ← React Router (routes: /auth, /app/*) + AdminRoute guard
 │   ├── pages\
@@ -383,10 +383,25 @@ Admins skip all compliance checks when connecting. They connect directly to the 
 
 ### Electron IPC handlers (in `electron/main.js`)
 - `compliance:run` → runs all 30 checks, returns results keyed by check ID
+- `window:minimize` → minimizes the app window
+- `window:maximize` → toggles maximize/restore
+- `window:close` → closes the app window
+- `window:is-maximized` → returns boolean maximize state
+- `window:maximized-change` → event sent to renderer when maximize state changes (e.g. Windows snap)
 
 ### Frontend API (via `window.electronAPI`)
 ```js
+// Window controls
+window.electronAPI.windowMinimize()      // minimize the window
+window.electronAPI.windowMaximize()      // toggle maximize/restore
+window.electronAPI.windowClose()         // close the window
+window.electronAPI.windowIsMaximized()   // Promise<boolean>
+window.electronAPI.onMaximizedChange(cb) // subscribe to maximize state changes → returns cleanup fn
+
+// Compliance
 window.electronAPI.runComplianceCheck()  // { check_id: { pass, detail }, ..., overall }
+
+// VPN
 window.electronAPI.vpnConnect({ privateKey, clientIp })
 window.electronAPI.vpnDisconnect()
 window.electronAPI.vpnStatus()           // { connected, rx, tx, latestHandshake, endpoint }
@@ -460,6 +475,7 @@ Admin-only page with two-column layout:
 - [x] ~~Policy management~~ → Policies.jsx created with full CRUD
 - [x] ~~30 compliance checks~~ → Implemented in Electron main.js
 - [x] ~~Registration gating~~ → Only policy-listed emails can register
+- [x] ~~Window controls are decorative~~ → wired to real Electron IPC (minimize/maximize-restore/close)
 - [ ] Multiple server/peer selection not implemented
 
 ---
