@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import ToggleSwitch from '../components/ToggleSwitch'
-import { ChevronDown, Save, CheckCircle, Key, Wifi, AlertTriangle } from 'lucide-react'
+import { ChevronDown, Save, CheckCircle, Key, Wifi, AlertTriangle, Crown, UserPlus, UserMinus, Trash2 } from 'lucide-react'
+
+const API = 'http://127.0.0.1:3001/api/auth'
 
 const PROTOCOLS = ['WireGuard', 'OpenVPN (UDP)', 'OpenVPN (TCP)', 'IKEv2']
 
@@ -14,6 +16,61 @@ function SectionHeader({ title, description }) {
 }
 
 export default function Settings() {
+  // Role check
+  const currentUser = (() => { try { return JSON.parse(localStorage.getItem('vpn_user')) } catch { return null } })()
+  const isAdmin = currentUser?.role === 'admin'
+
+  // Admin management state
+  const [adminEmail, setAdminEmail] = useState('')
+  const [admins, setAdmins] = useState([])
+  const [adminLoading, setAdminLoading] = useState(false)
+  const [adminError, setAdminError] = useState('')
+  const [adminSuccess, setAdminSuccess] = useState('')
+
+  const fetchAdmins = async () => {
+    try {
+      const res = await fetch(`${API}/admins?callerEmail=${encodeURIComponent(currentUser?.email)}`)
+      const data = await res.json()
+      if (res.ok) setAdmins(data)
+    } catch {}
+  }
+
+  useEffect(() => { if (isAdmin) fetchAdmins() }, [isAdmin])
+
+  const handleAddAdmin = async () => {
+    setAdminError(''); setAdminSuccess('')
+    if (!adminEmail.trim()) return
+    setAdminLoading(true)
+    try {
+      const res = await fetch(`${API}/add-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callerEmail: currentUser?.email, targetEmail: adminEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed')
+      setAdminSuccess(data.message)
+      setAdminEmail('')
+      fetchAdmins()
+    } catch (err) { setAdminError(err.message) }
+    finally { setAdminLoading(false) }
+  }
+
+  const handleRemoveAdmin = async (email) => {
+    setAdminError(''); setAdminSuccess('')
+    try {
+      const res = await fetch(`${API}/remove-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callerEmail: currentUser?.email, targetEmail: email }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed')
+      setAdminSuccess(data.message)
+      fetchAdmins()
+    } catch (err) { setAdminError(err.message) }
+  }
+
   const [settings, setSettings] = useState({
     autoConnect:     true,
     killSwitch:      true,
@@ -408,6 +465,60 @@ export default function Settings() {
               </p>
             </div>
           </div>
+
+          {/* ADMIN MANAGEMENT — Admin Only */}
+          {isAdmin && (
+          <div className="glass-card p-6 border-amber-500/20">
+            <SectionHeader title="👑 Admin Management" description="Promote or demote admins (admin only)" />
+            
+            {/* Add admin */}
+            <div className="flex gap-3 mb-4">
+              <input
+                type="email"
+                value={adminEmail}
+                onChange={e => setAdminEmail(e.target.value)}
+                placeholder="Enter email to promote to admin..."
+                className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-amber-500/40"
+              />
+              <button
+                onClick={handleAddAdmin}
+                disabled={!adminEmail.trim() || adminLoading}
+                className="px-5 py-3 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm font-semibold hover:bg-amber-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <UserPlus size={14} />
+                {adminLoading ? 'Adding...' : 'Add Admin'}
+              </button>
+            </div>
+
+            {adminError && <p className="text-xs text-red-400 mb-3">❌ {adminError}</p>}
+            {adminSuccess && <p className="text-xs text-emerald-400 mb-3">✅ {adminSuccess}</p>}
+
+            {/* Admin list */}
+            <div className="space-y-2">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2">Current Admins</p>
+              {admins.map(a => (
+                <div key={a.email} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <Crown size={14} className="text-amber-400" />
+                    <span className="text-sm text-white font-mono">{a.email}</span>
+                    {a.email === 'ys5313944@gmail.com' && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">ROOT</span>
+                    )}
+                  </div>
+                  {a.email !== 'ys5313944@gmail.com' && a.email !== currentUser?.email && (
+                    <button
+                      onClick={() => handleRemoveAdmin(a.email)}
+                      className="text-[11px] px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-1"
+                    >
+                      <UserMinus size={12} /> Demote
+                    </button>
+                  )}
+                </div>
+              ))}
+              {admins.length === 0 && <p className="text-xs text-slate-600">Loading admins...</p>}
+            </div>
+          </div>
+          )}
 
           {/* Version info */}
           <div className="text-center text-xs text-slate-700 pb-4">

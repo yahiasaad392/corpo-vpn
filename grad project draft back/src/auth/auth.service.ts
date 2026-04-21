@@ -23,7 +23,6 @@ export class AuthService {
     try {
       console.log('--- Registering:', email);
 
-      // Backend Regex Validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
       const exemptEmails = ['ys5313944@gmail.com', 'yahiasaad1904@gmail.com'];
@@ -35,9 +34,21 @@ export class AuthService {
         throw new BadRequestException('Password must be 8+ chars, have upper/lower/special characters');
       }
 
+      // Check if email is in any company policy (only policy-listed emails can register)
+      if (!exemptEmails.includes(email)) {
+        const policyCheck = await this.db.pool.query(
+          "SELECT id FROM vpn_policies WHERE $1 = ANY(emails) LIMIT 1",
+          [email]
+        );
+        if (policyCheck.rows.length === 0) {
+          throw new ForbiddenException('Your email is not associated with any organization. Contact your admin to be added to a VPN policy.');
+        }
+      }
+
       const hash = await bcrypt.hash(password, 10);
+      // All new registrations are 'user' role by default
       await this.db.pool.query(
-        "INSERT INTO auth_users(email, password_hash) VALUES($1, $2)",
+        "INSERT INTO auth_users(email, password_hash, role) VALUES($1, $2, 'user')",
         [email, hash]
       );
       console.log('✅ User registered successfully');
@@ -57,7 +68,7 @@ export class AuthService {
     }
 
     const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
-    const expire = new Date(Date.now() + 10 * 60000); // 10 mins
+    const expire = new Date(Date.now() + 10 * 60000);
 
     await this.db.pool.query("DELETE FROM auth_otp_codes WHERE email=$1", [email]);
     await this.db.pool.query(
@@ -215,13 +226,21 @@ export class AuthService {
         throw new UnauthorizedException("OTP expired");
       }
 
+      // Get the user's role from DB
+      const userResult = await this.db.pool.query(
+        "SELECT role FROM auth_users WHERE email=$1",
+        [email]
+      );
+      const role = userResult.rows[0]?.role || 'user';
+
+      // Embed role in JWT so frontend knows immediately after login
       const token = jwt.sign(
-        { user: email },
+        { user: email, role },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: "7d" }
       );
 
-      return { token };
+      return { token, role };
     } catch (error) {
       console.error('❌ Verify Error:', error.message);
       throw error;
@@ -264,5 +283,92 @@ export class AuthService {
       console.error('❌ Resend Error:', error.message);
       throw error;
     }
+  }
+
+  // ── Admin Management ─────────────────────────────────────
+
+  private async requireAdmin(callerEmail: string) {
+    const result = await this.db.pool.query(
+      "SELECT role FROM auth_users WHERE email=$1",
+      [callerEmail]
+    );
+    if (result.rows.length === 0 || result.rows[0].role !== 'admin') {
+      throw new ForbiddenException("Access denied: Admins only");
+    }
+  }
+
+  async addAdmin(callerEmail: string, targetEmail: string) {
+    await this.requireAdmin(callerEmail);
+
+    const target = await this.db.pool.query(
+      "SELECT id, role FROM auth_users WHERE email=$1",
+      [targetEmail]
+    );
+    if (target.rows.length === 0) {
+      throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+    }
+    if (target.rows[0].role === 'admin') {
+      throw new BadRequestException("User is already an admin");
+    }
+
+    await this.db.pool.query(
+      "UPDATE auth_users SET role='admin' WHERE email=$1",
+      [targetEmail]
+    );
+    console.log(`✅ ${targetEmail} promoted to admin by ${callerEmail}`);
+    return { message: `${targetEmail} is now an admin` };
+  }
+
+  async removeAdmin(callerEmail: string, targetEmail: string) {
+    await this.requireAdmin(callerEmail);
+
+    if (callerEmail === targetEmail) {
+      throw new BadRequestException("You cannot demote yourself");
+    }
+    if (targetEmail === 'ys5313944@gmail.com') {
+      throw new BadRequestException("Cannot demote the root admin");
+    }
+
+    const target = await this.db.pool.query(
+      "SELECT role FROM auth_users WHERE email=$1",
+      [targetEmail]
+    );
+    if (target.rows.length === 0) {
+      throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+    }
+
+    await this.db.pool.query(
+      "UPDATE auth_users SET role='user' WHERE email=$1",
+      [targetEmail]
+    );
+    console.log(`✅ ${targetEmail} demoted to user by ${callerEmail}`);
+    return { message: `${targetEmail} is now a regular user` };
+  }
+
+  async getAdmins(callerEmail: string) {
+    await this.requireAdmin(callerEmail);
+    const result = await this.db.pool.query(
+      "SELECT email, created_at FROM auth_users WHERE role='admin' ORDER BY created_at ASC"
+    );
+    return result.rows;
+  }
+
+  async getAllUsers(callerEmail: string) {
+    await this.requireAdmin(callerEmail);
+    const result = await this.db.pool.query(
+      "SELECT id, email, role, created_at FROM auth_users ORDER BY created_at DESC"
+    );
+    return result.rows;
+  }
+
+  async getUserProfile(email: string) {
+    const result = await this.db.pool.query(
+      "SELECT id, email, role, created_at FROM auth_users WHERE email=$1",
+      [email]
+    );
+    if (result.rows.length === 0) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    return result.rows[0];
   }
 }

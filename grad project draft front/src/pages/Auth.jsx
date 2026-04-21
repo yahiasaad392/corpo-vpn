@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const API = 'http://127.0.0.1:3001/api/auth'
+const POLICY_API = 'http://127.0.0.1:3001/api/policy'
 
 export default function Auth() {
   const navigate = useNavigate()
@@ -41,8 +42,18 @@ export default function Auth() {
     // 8+ chars, 1 upper, 1 lower, 1 special
     return /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/.test(password);
   };
+
+  // ── Password strength checks (used in register form) ──
+  const passwordChecks = [
+    { label: 'At least 8 characters', test: (p) => p.length >= 8 },
+    { label: 'Uppercase letter (A-Z)', test: (p) => /[A-Z]/.test(p) },
+    { label: 'Lowercase letter (a-z)', test: (p) => /[a-z]/.test(p) },
+    { label: 'Special character (!@#$%^&*)', test: (p) => /[!@#$%^&*]/.test(p) },
+    { label: 'Number (0-9)', test: (p) => /[0-9]/.test(p) },
+  ];
   
-  const isFormValid = validateEmail(email) && (step === 'otp' || validatePassword(password, email));
+  const allPasswordChecksPassed = passwordChecks.every(c => c.test(password));
+  const isFormValid = validateEmail(email) && (step === 'otp' || (step === 'register' ? allPasswordChecksPassed : validatePassword(password, email)));
 
   // ── Register ───────────────────────────────────────────
   const handleRegister = async (e) => {
@@ -103,7 +114,7 @@ export default function Auth() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Invalid OTP')
       localStorage.setItem('vpn_token', data.token)
-      localStorage.setItem('vpn_user', JSON.stringify(data.user))
+      localStorage.setItem('vpn_user', JSON.stringify({ email, role: data.role || 'user' }))
       navigate('/app/dashboard', { replace: true })
     } catch (err) {
       setError(err.message)
@@ -181,6 +192,60 @@ export default function Auth() {
     }
   }
 
+  // ── Password strength dots ──
+  const renderPasswordDots = () => {
+    const filled = passwordChecks.filter(c => c.test(password)).length
+    return (
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 8, marginBottom: 4 }}>
+        {passwordChecks.map((_, i) => (
+          <div
+            key={i}
+            style={{
+              width: 10, height: 10, borderRadius: '50%',
+              background: i < filled
+                ? (filled <= 2 ? '#ef4444' : filled <= 4 ? '#f59e0b' : '#22c55e')
+                : 'rgba(255,255,255,0.1)',
+              transition: 'all 0.3s ease',
+              boxShadow: i < filled
+                ? `0 0 8px ${filled <= 2 ? 'rgba(239,68,68,0.4)' : filled <= 4 ? 'rgba(245,158,11,0.4)' : 'rgba(34,197,94,0.4)'}`
+                : 'none',
+            }}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  // ── Password checklist ──
+  const renderPasswordChecklist = () => {
+    if (!password) return null
+    return (
+      <div style={{ marginTop: 6, padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+        {passwordChecks.map((check, i) => {
+          const passed = check.test(password)
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0',
+              fontSize: 11, color: passed ? '#4ade80' : '#94a3b8',
+              transition: 'color 0.2s',
+            }}>
+              <span style={{
+                fontSize: 12, width: 16, textAlign: 'center',
+                transition: 'transform 0.2s',
+                transform: passed ? 'scale(1.1)' : 'scale(1)',
+              }}>
+                {passed ? '✓' : '○'}
+              </span>
+              <span style={{ textDecoration: passed ? 'none' : 'none', opacity: passed ? 1 : 0.7 }}>
+                {check.label}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div style={styles.page}>
       {/* Animated background */}
@@ -222,7 +287,6 @@ export default function Auth() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                minLength={6}
                 style={styles.input}
               />
             </div>
@@ -236,7 +300,7 @@ export default function Auth() {
             </p>
             <p style={styles.switchText}>
               Don't have an account?{' '}
-              <span style={styles.switchLink} onClick={() => { setStep('register'); clearMessages() }}>
+              <span style={styles.switchLink} onClick={() => { setStep('register'); clearMessages(); setPassword('') }}>
                 Register
               </span>
             </p>
@@ -256,6 +320,9 @@ export default function Auth() {
                 required
                 style={styles.input}
               />
+              <p style={{ fontSize: 10, color: '#64748b', margin: '4px 0 0', lineHeight: 1.4 }}>
+                Your email must be registered in a company policy by an admin.
+              </p>
             </div>
             <div style={styles.inputGroup}>
               <label style={styles.label}>Password</label>
@@ -263,18 +330,19 @@ export default function Auth() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Min 6 characters"
+                placeholder="••••••••"
                 required
-                minLength={6}
                 style={styles.input}
               />
+              {renderPasswordDots()}
+              {renderPasswordChecklist()}
             </div>
             <button type="submit" disabled={loading || !isFormValid} style={{...styles.btn, opacity: (loading || !isFormValid) ? 0.5 : 1, cursor: (loading || !isFormValid) ? 'not-allowed' : 'pointer'}}>
               {loading ? 'Creating...' : 'Create Account'}
             </button>
             <p style={styles.switchText}>
               Already have an account?{' '}
-              <span style={styles.switchLink} onClick={() => { setStep('login'); clearMessages() }}>
+              <span style={styles.switchLink} onClick={() => { setStep('login'); clearMessages(); setPassword('') }}>
                 Sign In
               </span>
             </p>
@@ -370,13 +438,14 @@ export default function Auth() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="8+ chars, upper, lower, special"
+                placeholder="••••••••"
                 required
-                minLength={8}
                 style={styles.input}
               />
+              {renderPasswordDots()}
+              {renderPasswordChecklist()}
             </div>
-            <button type="submit" disabled={loading || otp.length !== 6 || !validatePassword(password)} style={{...styles.btn, opacity: (loading || otp.length !== 6 || !validatePassword(password)) ? 0.5 : 1, cursor: (loading || otp.length !== 6 || !validatePassword(password)) ? 'not-allowed' : 'pointer'}}>
+            <button type="submit" disabled={loading || otp.length !== 6 || !allPasswordChecksPassed} style={{...styles.btn, opacity: (loading || otp.length !== 6 || !allPasswordChecksPassed) ? 0.5 : 1, cursor: (loading || otp.length !== 6 || !allPasswordChecksPassed) ? 'not-allowed' : 'pointer'}}>
               {loading ? 'Updating...' : 'Update Password'}
             </button>
             <p style={styles.switchText}>

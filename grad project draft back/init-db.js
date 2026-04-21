@@ -39,6 +39,25 @@ async function run() {
 
     console.log('✅ Tables created successfully');
 
+    // Create VPN Policies table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS vpn_policies (
+        id SERIAL PRIMARY KEY,
+        company_name VARCHAR(255) NOT NULL,
+        max_users INT NOT NULL DEFAULT 10,
+        session_timeout INT NOT NULL DEFAULT 3600,
+        emails TEXT[] NOT NULL DEFAULT '{}',
+        critical_checks TEXT[] NOT NULL DEFAULT '{}',
+        warning_checks TEXT[] NOT NULL DEFAULT '{}',
+        info_checks TEXT[] NOT NULL DEFAULT '{}',
+        created_by VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    console.log('✅ VPN Policies table created successfully');
+
     // Seeding User Requested by the prompt: ys5313944@gmail.com / Ys5926
     const email = 'ys5313944@gmail.com';
     const rawPass = 'Ys5926';

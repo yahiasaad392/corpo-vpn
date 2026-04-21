@@ -4,8 +4,15 @@ import StatusRing from '../components/StatusRing'
 import StatsCard from '../components/StatsCard'
 import ComplianceSidebar from '../components/ComplianceSidebar'
 import { hqGateway } from '../data/mockData'
+import { ALL_CHECKS_MAP } from '../data/complianceChecks'
+
+const POLICY_API = 'http://127.0.0.1:3001/api/policy'
 
 export default function Dashboard() {
+  // Check user role
+  const currentUser = (() => { try { return JSON.parse(localStorage.getItem('vpn_user')) } catch { return null } })()
+  const isAdmin = currentUser?.role === 'admin'
+
   const [status, setStatus] = useState('disconnected') // disconnected | connecting | connected | error
   const [timer, setTimer] = useState(0)
   const [error, setError] = useState(null)
@@ -16,6 +23,10 @@ export default function Dashboard() {
   const [isScanning, setIsScanning] = useState(false)
   const [showCompliance, setShowCompliance] = useState(false)
   const [complianceResults, setComplianceResults] = useState(null)
+  
+  // Policy State
+  const [userPolicy, setUserPolicy] = useState(null)
+  const [policyLoaded, setPolicyLoaded] = useState(false)
   
   const statusInterval = useRef(null)
 
@@ -29,6 +40,21 @@ export default function Dashboard() {
       })
     }
   }, [isElectron])
+
+  // Load user's policy on mount (only for non-admins)
+  useEffect(() => {
+    if (!isAdmin && currentUser?.email) {
+      fetch(`${POLICY_API}/my-policy?email=${encodeURIComponent(currentUser.email)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.found) setUserPolicy(data.policy)
+          setPolicyLoaded(true)
+        })
+        .catch(() => setPolicyLoaded(true))
+    } else {
+      setPolicyLoaded(true)
+    }
+  }, [isAdmin, currentUser?.email])
 
   // Poll WireGuard status when connected
   useEffect(() => {
@@ -70,15 +96,24 @@ export default function Dashboard() {
     
     try {
       if (!isElectron) {
-        // Mock for browser
+        // Mock for browser — simulate all checks passing
         await new Promise(r => setTimeout(r, 2000))
-        const mockResults = {
-          os: { pass: true, label: 'Windows 11 (Mock)' },
-          firewall: { pass: true },
-          defender: { pass: true },
-          disk: { pass: true, freeGb: 45 },
-          overall: true
-        }
+        const mockResults = {}
+        // Generate mock results for all checks in the user's policy
+        const allCheckIds = [
+          ...(userPolicy?.critical_checks || []),
+          ...(userPolicy?.warning_checks || []),
+          ...(userPolicy?.info_checks || []),
+        ]
+        allCheckIds.forEach(id => {
+          mockResults[id] = { pass: true, label: 'Passed (Mock)', detail: 'Mock environment' }
+        })
+        // Also add legacy keys for backwards compat
+        mockResults.os = { pass: true, label: 'Windows 11 (Mock)' }
+        mockResults.firewall = { pass: true }
+        mockResults.defender = { pass: true }
+        mockResults.disk = { pass: true, freeGb: 45 }
+        mockResults.overall = true
         setComplianceResults(mockResults)
         setIsScanning(false)
         return mockResults
@@ -120,15 +155,90 @@ export default function Dashboard() {
       return
     }
 
-    // ── STEP 1: COMPLIANCE SCAN ──
-    setStatus('connecting') // Visual feedback
+    // ── ADMIN BYPASS: Skip compliance entirely ──
+    if (isAdmin) {
+      setStatus('connecting')
+
+      if (!isElectron) {
+        setTimeout(() => setStatus('connected'), 2000)
+        return
+      }
+
+      const config = await window.electronAPI.vpnLoadConfig()
+      if (!config?.privateKey || !config?.clientIp) {
+        setError('No WireGuard config found. Go to Settings → WireGuard Config and enter your private key and client IP.')
+        setStatus('error')
+        return
+      }
+
+      setClientIp(config.clientIp)
+      const res = await window.electronAPI.vpnConnect({
+        privateKey: config.privateKey,
+        clientIp: config.clientIp,
+      })
+
+      if (res.success) {
+        const st = await window.electronAPI.vpnStatus()
+        if (st.connected) {
+          setLiveStats({
+            rx: st.rx || '0 B', tx: st.tx || '0 B',
+            handshake: st.latestHandshake || 'Just now',
+            endpoint: st.endpoint || '80.65.211.27:51820',
+          })
+        }
+        setStatus('connected')
+      } else {
+        setError(res.error)
+        setStatus('disconnected')
+      }
+      return
+    }
+
+    // ── USER: STEP 1 — COMPLIANCE SCAN ──
+    setStatus('connecting')
     const results = await handleComplianceScan()
     
-    if (!results || !results.overall) {
-      setError('Device non-compliant. See sidebar for details.')
+    if (!results) {
+      setError('Compliance scan failed.')
       setStatus('disconnected')
       return
     }
+
+    // Evaluate results against policy
+    const criticalIds = userPolicy?.critical_checks || []
+    const warningIds = userPolicy?.warning_checks || []
+
+    const criticalFails = criticalIds.filter(id => results[id] && !results[id].pass)
+    const warningFails = warningIds.filter(id => results[id] && !results[id].pass)
+
+    // ── SEND ONE COMBINED NOTIFICATION for all failures ──
+    const criticalLabels = criticalFails.map(id => ALL_CHECKS_MAP[id]?.label || id)
+    const warningLabels = warningFails.map(id => ALL_CHECKS_MAP[id]?.label || id)
+
+    if (criticalFails.length > 0 || warningFails.length > 0) {
+      try {
+        await fetch(`${POLICY_API}/notify-warning`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: currentUser.email,
+            criticalFails: criticalLabels,
+            warningFails: warningLabels,
+          }),
+        })
+      } catch (e) {
+        console.warn('Compliance notification failed:', e)
+      }
+    }
+
+    // ── CRITICAL FAILURES → BLOCK ──
+    if (criticalFails.length > 0) {
+      setError(`Device non-compliant. ${criticalFails.length} critical check(s) failed. See sidebar for details.`)
+      setStatus('disconnected')
+      return
+    }
+
+    // ── WARNING ONLY → proceed to connect (admins already notified above) ──
 
     // ── STEP 2: VPN CONNECT ──
     if (!isElectron) {
@@ -156,7 +266,6 @@ export default function Dashboard() {
     })
 
     if (res.success) {
-      // Backend already verified the handshake — tunnel is confirmed working
       const st = await window.electronAPI.vpnStatus()
       if (st.connected) {
         setLiveStats({
@@ -167,13 +276,13 @@ export default function Dashboard() {
         })
       }
       setStatus('connected')
-      setShowCompliance(false)
+      // Keep sidebar open if there were warnings
+      if (warningFails.length === 0) setShowCompliance(false)
     } else {
-      // Backend already rolled back the tunnel automatically
       setError(res.error)
       setStatus('disconnected')
     }
-  }, [status, isElectron])
+  }, [status, isElectron, isAdmin, userPolicy, currentUser?.email])
 
   return (
     <div className="relative min-h-screen">
@@ -183,16 +292,21 @@ export default function Dashboard() {
         isScanning={isScanning} 
         results={complianceResults} 
         onRetry={handleComplianceScan}
+        policy={userPolicy}
+        isAdmin={isAdmin}
       />
 
       <div className={`p-8 space-y-8 max-w-7xl mx-auto transition-all duration-500 ${showCompliance || isScanning ? 'mr-80' : ''}`}>
       {/* Error Banner */}
       {error && (
-        <div className={`flex items-start gap-3 p-4 rounded-2xl border animate-fade-in ${complianceResults && !complianceResults.overall ? 'bg-red-600/20 border-red-500/50' : 'bg-red-500/10 border-red-500/30'}`}>
+        <div className={`flex items-start gap-3 p-4 rounded-2xl border animate-fade-in ${complianceResults && (userPolicy?.critical_checks || []).some(id => complianceResults[id] && !complianceResults[id].pass) ? 'bg-red-600/20 border-red-500/50' : 'bg-red-500/10 border-red-500/30'}`}>
           <AlertTriangle size={18} className="text-red-400 mt-0.5 shrink-0" />
           <div>
-            <p className={`text-sm font-semibold ${complianceResults && !complianceResults.overall ? 'text-red-400' : 'text-red-300'}`}>
-              {complianceResults && !complianceResults.overall ? '⚠️ SYSTEM NON-COMPLIANT' : 'Connection Error'}
+            <p className={`text-sm font-semibold text-red-300`}>
+              {complianceResults && (userPolicy?.critical_checks || []).some(id => complianceResults[id] && !complianceResults[id].pass)
+                ? '⚠️ SYSTEM NON-COMPLIANT'
+                : 'Connection Error'
+              }
             </p>
             <p className="text-xs text-red-400/80 mt-0.5">{error}</p>
           </div>
@@ -240,6 +354,9 @@ export default function Dashboard() {
           <p className="text-slate-500 font-medium">
              Target: <span className="text-cyan-500">{hqGateway.name}</span> • {hqGateway.gatewayIp}
           </p>
+          {isAdmin && status === 'disconnected' && (
+            <p className="text-amber-400/60 text-xs font-semibold uppercase tracking-wider">Admin — Compliance bypassed</p>
+          )}
         </div>
       </div>
 
@@ -279,7 +396,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* HQ Details Card */}
+      {/* HQ Details Card — Admin Only */}
+      {isAdmin && (
       <div className="glass-card p-6 flex flex-col md:flex-row items-center justify-between gap-6 border-cyan-500/10 animate-fade-in">
          <div className="flex items-center gap-5">
             <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
@@ -311,6 +429,7 @@ export default function Dashboard() {
             </div>
          </div>
       </div>
+      )}
       </div>
     </div>
   )
