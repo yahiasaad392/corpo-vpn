@@ -1,11 +1,12 @@
 const { Pool } = require('pg');
+require('dotenv').config();
 
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'gradprojfb',
-  password: '5926',
-  port: 5432,
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'gradprojdb',
+  password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT || '5432', 10),
 });
 
 async function nukeAndRebuild() {
@@ -53,13 +54,19 @@ async function nukeAndRebuild() {
 
     // Seed the user
     const bcrypt = require('bcrypt');
-    const hash = await bcrypt.hash('Ys5926', 10);
-    await client.query(
-      'INSERT INTO users(email, password_hash) VALUES($1, $2)',
-      ['ys5313944@gmail.com', hash]
-    );
+    const seedEmail = process.env.ADMIN_EMAIL;
+    const seedPass = process.env.SEED_PASSWORD;
+    if (!seedEmail || !seedPass) {
+      console.log('⚠️  ADMIN_EMAIL or SEED_PASSWORD not set in .env — skipping seed user.');
+    } else {
+      const hash = await bcrypt.hash(seedPass, 10);
+      await client.query(
+        'INSERT INTO users(email, password_hash) VALUES($1, $2)',
+        [seedEmail, hash]
+      );
+      console.log(`✅ Fresh Database Ready with seeded user: ${seedEmail}`);
+    }
 
-    console.log('✅ Fresh Database Ready with seeded user: ys5313944@gmail.com');
     client.release();
   } catch (err) {
     console.error('❌ Nuke Error:', err.message);

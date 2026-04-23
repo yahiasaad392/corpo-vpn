@@ -58,9 +58,14 @@ async function run() {
 
     console.log('✅ VPN Policies table created successfully');
 
-    // Seeding User Requested by the prompt: ys5313944@gmail.com / Ys5926
-    const email = 'ys5313944@gmail.com';
-    const rawPass = 'Ys5926';
+    // Seed the admin user from env vars
+    const email = process.env.ADMIN_EMAIL;
+    const rawPass = process.env.SEED_PASSWORD;
+    if (!email || !rawPass) {
+      console.log('⚠️  ADMIN_EMAIL or SEED_PASSWORD not set in .env — skipping seed user.');
+      client.release();
+      return;
+    }
     const hash = await bcrypt.hash(rawPass, 10);
 
     const check = await client.query('SELECT * FROM users WHERE email=$1', [email]);

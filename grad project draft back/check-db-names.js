@@ -1,13 +1,14 @@
 const { Pool } = require('pg');
+require('dotenv').config();
 
 async function test(name) {
   console.log(`Testing ${name}...`);
   const p = new Pool({
-    user: 'postgres',
-    host: 'localhost',
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
     database: name,
-    password: '5926',
-    port: 5432,
+    password: process.env.DB_PASSWORD,
+    port: parseInt(process.env.DB_PORT || '5432', 10),
     connectionTimeoutMillis: 5000,
   });
   try {

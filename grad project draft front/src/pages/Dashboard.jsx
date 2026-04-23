@@ -7,6 +7,7 @@ import { hqGateway } from '../data/mockData'
 import { ALL_CHECKS_MAP } from '../data/complianceChecks'
 
 const POLICY_API = 'http://127.0.0.1:3001/api/policy'
+const AUTH_API = 'http://127.0.0.1:3001/api/auth'
 
 export default function Dashboard() {
   // Check user role
@@ -32,14 +33,33 @@ export default function Dashboard() {
 
   const isElectron = !!window.electronAPI?.vpnConnect
 
-  // Load saved client config to show IP
+  // Load VPN config from backend (auto-provisioned) and show IP
   useEffect(() => {
-    if (isElectron && window.electronAPI?.vpnLoadConfig) {
-      window.electronAPI.vpnLoadConfig().then(config => {
-        if (config?.clientIp) setClientIp(config.clientIp)
-      })
+    if (currentUser?.email) {
+      fetch(`${AUTH_API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.provisioned && data.clientIp) {
+            setClientIp(data.clientIp)
+            // Also save to Electron store for offline use
+            if (isElectron && window.electronAPI?.vpnSaveConfig) {
+              window.electronAPI.vpnSaveConfig({
+                privateKey: data.privateKey,
+                clientIp: data.clientIp,
+              })
+            }
+          }
+        })
+        .catch(() => {
+          // Fallback: try loading from local Electron store
+          if (isElectron && window.electronAPI?.vpnLoadConfig) {
+            window.electronAPI.vpnLoadConfig().then(config => {
+              if (config?.clientIp) setClientIp(config.clientIp)
+            })
+          }
+        })
     }
-  }, [isElectron])
+  }, [currentUser?.email, isElectron])
 
   // Load user's policy on mount (only for non-admins)
   useEffect(() => {
@@ -137,6 +157,21 @@ export default function Dashboard() {
     return `${hrs}:${mins}:${secs}`
   }
 
+  // ─── Helper: Fetch VPN config from backend ────────────────────
+
+  const fetchVpnConfig = async () => {
+    try {
+      const res = await fetch(`${AUTH_API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+      const data = await res.json()
+      if (data.provisioned && data.privateKey && data.clientIp) {
+        return { privateKey: data.privateKey, clientIp: data.clientIp }
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
   // ─── Real WireGuard Connect / Disconnect ────────────────────
 
   const handleToggle = useCallback(async () => {
@@ -164,9 +199,13 @@ export default function Dashboard() {
         return
       }
 
-      const config = await window.electronAPI.vpnLoadConfig()
+      // Fetch config from backend (auto-provisioned)
+      const vpnConfig = await fetchVpnConfig()
+
+      // Fallback to local Electron store
+      const config = vpnConfig || await window.electronAPI.vpnLoadConfig()
       if (!config?.privateKey || !config?.clientIp) {
-        setError('No WireGuard config found. Go to Settings → WireGuard Config and enter your private key and client IP.')
+        setError('No WireGuard config found. Your VPN peer has not been provisioned yet. Contact the server admin.')
         setStatus('error')
         return
       }
@@ -250,10 +289,13 @@ export default function Dashboard() {
       return
     }
 
-    // Load saved config
-    const config = await window.electronAPI.vpnLoadConfig()
+    // Fetch config from backend (auto-provisioned)
+    const vpnConfig = await fetchVpnConfig()
+
+    // Fallback to local Electron store
+    const config = vpnConfig || await window.electronAPI.vpnLoadConfig()
     if (!config?.privateKey || !config?.clientIp) {
-      setError('No WireGuard config found. Go to Settings → WireGuard Config and enter your private key and client IP.')
+      setError('No WireGuard config found. Your VPN peer has not been provisioned yet. Contact your admin.')
       setStatus('error')
       return
     }

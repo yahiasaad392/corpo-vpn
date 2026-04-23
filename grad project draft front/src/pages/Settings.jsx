@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import ToggleSwitch from '../components/ToggleSwitch'
-import { ChevronDown, Save, CheckCircle, Key, Wifi, AlertTriangle, Crown, UserPlus, UserMinus, Trash2 } from 'lucide-react'
+import { ChevronDown, Save, CheckCircle, Key, Wifi, AlertTriangle, Crown, UserPlus, UserMinus, Trash2, RefreshCw, ShieldCheck, Loader2 } from 'lucide-react'
 
 const API = 'http://127.0.0.1:3001/api/auth'
 
@@ -86,11 +86,12 @@ export default function Settings() {
   const [protocolOpen, setProtocolOpen] = useState(false)
   const [startup, setStartup] = useState('minimize')
 
-  // WireGuard config state
-  const [wgPrivateKey, setWgPrivateKey] = useState('')
-  const [wgClientIp, setWgClientIp] = useState('10.10.0.3')
-  const [configSaved, setConfigSaved] = useState(false)
+  // WireGuard config state (now read-only, fetched from backend)
+  const [vpnConfig, setVpnConfig] = useState(null)
+  const [configLoading, setConfigLoading] = useState(true)
   const [configError, setConfigError] = useState(null)
+  const [reprovisionLoading, setReprovisionLoading] = useState(false)
+  const [reprovisionSuccess, setReprovisionSuccess] = useState(false)
 
   // Password change state
   const [oldPassword, setOldPassword] = useState('')
@@ -137,51 +138,62 @@ export default function Settings() {
     }
   };
 
-  const isElectron = !!window.electronAPI?.vpnSaveConfig
-
-  // Load saved config on mount
+  // Fetch VPN config from backend on mount
   useEffect(() => {
-    if (isElectron && window.electronAPI?.vpnLoadConfig) {
-      window.electronAPI.vpnLoadConfig().then(config => {
-        if (config) {
-          if (config.privateKey) setWgPrivateKey(config.privateKey)
-          if (config.clientIp)   setWgClientIp(config.clientIp)
-        }
-      })
+    if (currentUser?.email) {
+      setConfigLoading(true)
+      fetch(`${API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.provisioned) {
+            setVpnConfig(data)
+          }
+          setConfigLoading(false)
+        })
+        .catch(err => {
+          setConfigError('Failed to load VPN configuration')
+          setConfigLoading(false)
+        })
     }
-  }, [isElectron])
+  }, [currentUser?.email])
+
+  // Re-provision VPN config (admin-only or self)
+  const handleReprovision = async () => {
+    setReprovisionLoading(true)
+    setReprovisionSuccess(false)
+    setConfigError(null)
+    try {
+      const res = await fetch(`${API}/reprovision-vpn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentUser.email }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Re-provision failed')
+      
+      // Refresh config
+      const configRes = await fetch(`${API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+      const configData = await configRes.json()
+      if (configData.provisioned) {
+        setVpnConfig(configData)
+      }
+      
+      setReprovisionSuccess(true)
+      setTimeout(() => setReprovisionSuccess(false), 4000)
+    } catch (err) {
+      setConfigError(err.message)
+    } finally {
+      setReprovisionLoading(false)
+    }
+  }
 
   const toggle = key => setSettings(s => ({ ...s, [key]: !s[key] }))
 
-  const handleSaveWgConfig = async () => {
-    setConfigError(null)
-    setConfigSaved(false)
-
-    if (!wgPrivateKey.trim()) {
-      setConfigError('Private key is required')
-      return
-    }
-    if (!wgClientIp.trim()) {
-      setConfigError('Client IP is required')
-      return
-    }
-
-    if (isElectron) {
-      const res = await window.electronAPI.vpnSaveConfig({
-        privateKey: wgPrivateKey.trim(),
-        clientIp: wgClientIp.trim(),
-      })
-      if (res.success) {
-        setConfigSaved(true)
-        setTimeout(() => setConfigSaved(false), 3000)
-      } else {
-        setConfigError(res.error)
-      }
-    } else {
-      // Browser mode — just show success
-      setConfigSaved(true)
-      setTimeout(() => setConfigSaved(false), 3000)
-    }
+  // Mask private key for display
+  const maskKey = (key) => {
+    if (!key) return '—'
+    if (key.length <= 8) return '••••••••'
+    return key.substring(0, 4) + '••••••••••••••••••••' + key.substring(key.length - 4)
   }
 
   return (
@@ -195,14 +207,14 @@ export default function Settings() {
 
         <div className="space-y-8">
 
-          {/* WIREGUARD CONFIG — NEW */}
+          {/* WIREGUARD CONFIG — READ-ONLY (AUTO-PROVISIONED) */}
           <div className="glass-card p-6 border-cyan-500/20">
-            <SectionHeader title="🔑 WireGuard Configuration" description="Enter your client credentials to connect to the VPN server" />
+            <SectionHeader title="🔑 WireGuard Configuration" description="Your VPN peer is automatically provisioned when you register" />
             
             <div className="space-y-4">
               {/* Server info (read-only) */}
               <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Server Details (pre-configured)</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Server Details</p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div><span className="text-slate-500">Endpoint:</span> <span className="text-cyan-400 font-mono">80.65.211.27:51820</span></div>
                   <div><span className="text-slate-500">Protocol:</span> <span className="text-cyan-400 font-mono">WireGuard</span></div>
@@ -211,39 +223,76 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Client Private Key */}
-              <div>
-                <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
-                  <Key size={12} className="text-cyan-500" />
-                  Client Private Key
-                </label>
-                <input
-                  type="password"
-                  value={wgPrivateKey}
-                  onChange={e => setWgPrivateKey(e.target.value)}
-                  placeholder="Paste your WireGuard private key..."
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono 
-                    placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 transition-all"
-                />
-                <p className="text-[10px] text-slate-600 mt-1">Generated on the server with `wg genkey`. Never share this key.</p>
-              </div>
+              {/* Auto-provisioned config display */}
+              {configLoading ? (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <Loader2 size={16} className="text-cyan-400 animate-spin" />
+                  <span className="text-sm text-slate-400">Loading VPN configuration...</span>
+                </div>
+              ) : vpnConfig ? (
+                <>
+                  {/* Provisioned status badge */}
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <ShieldCheck size={14} className="text-emerald-400" />
+                    <span className="text-xs text-emerald-300 font-semibold">VPN Peer Provisioned</span>
+                    <span className="text-[10px] text-emerald-400/60 ml-auto font-mono">Auto-assigned on registration</span>
+                  </div>
 
-              {/* Client IP */}
-              <div>
-                <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
-                  <Wifi size={12} className="text-cyan-500" />
-                  Client VPN IP Address
-                </label>
-                <input
-                  type="text"
-                  value={wgClientIp}
-                  onChange={e => setWgClientIp(e.target.value)}
-                  placeholder="e.g., 10.10.0.3"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono 
-                    placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 transition-all"
-                />
-                <p className="text-[10px] text-slate-600 mt-1">Assigned by your server admin. Must be in the 10.10.0.2 - 10.10.0.254 range.</p>
-              </div>
+                  {/* Client IP (readable) */}
+                  <div>
+                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
+                      <Wifi size={12} className="text-cyan-500" />
+                      Client VPN IP Address
+                    </label>
+                    <div className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono select-all">
+                      {vpnConfig.clientIp}
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1">Automatically assigned by the VPN server. This is your unique tunnel address.</p>
+                  </div>
+
+                  {/* Private Key (masked) */}
+                  <div>
+                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
+                      <Key size={12} className="text-cyan-500" />
+                      Client Private Key
+                    </label>
+                    <div className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-500 text-sm font-mono">
+                      {maskKey(vpnConfig.privateKey)}
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1">Securely stored. This key was generated by the VPN server during registration.</p>
+                  </div>
+
+                  {/* Re-provision button (admin-only) */}
+                  {isAdmin && (
+                    <button
+                      onClick={handleReprovision}
+                      disabled={reprovisionLoading}
+                      className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300
+                        ${reprovisionSuccess
+                          ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
+                          : 'bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {reprovisionLoading ? (
+                        <><Loader2 size={16} className="animate-spin" /> Re-provisioning...</>
+                      ) : reprovisionSuccess ? (
+                        <><CheckCircle size={16} /> New Peer Provisioned!</>
+                      ) : (
+                        <><RefreshCw size={16} /> Re-provision VPN Peer (Admin)</>
+                      )}
+                    </button>
+                  )}
+                </>
+              ) : (
+                /* Not yet provisioned */
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <AlertTriangle size={16} className="text-amber-400" />
+                  <div>
+                    <p className="text-sm text-amber-300 font-semibold">VPN Peer Not Provisioned</p>
+                    <p className="text-xs text-amber-400/60 mt-0.5">Your VPN config will be automatically provisioned on your next login. If the issue persists, contact your admin.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Error */}
               {configError && (
@@ -252,22 +301,6 @@ export default function Settings() {
                   <span className="text-xs text-red-300">{configError}</span>
                 </div>
               )}
-
-              {/* Save Button */}
-              <button
-                onClick={handleSaveWgConfig}
-                className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300
-                  ${configSaved 
-                    ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
-                    : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 hover:shadow-[0_0_20px_rgba(0,245,255,0.2)]'
-                  }`}
-              >
-                {configSaved ? (
-                  <><CheckCircle size={16} /> Configuration Saved!</>
-                ) : (
-                  <><Save size={16} /> Save WireGuard Config</>
-                )}
-              </button>
             </div>
           </div>
 

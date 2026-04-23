@@ -119,7 +119,10 @@ CREATE TABLE IF NOT EXISTS auth_users (
   lock_until TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   otp VARCHAR(10),
-  otp_expires_at TIMESTAMP
+  otp_expires_at TIMESTAMP,
+  wg_config TEXT,                          -- full raw WireGuard config from VPN server
+  wg_private_key VARCHAR(255),             -- parsed client private key
+  wg_address VARCHAR(50)                   -- parsed client VPN IP (e.g. 10.10.0.3)
 );
 
 CREATE TABLE IF NOT EXISTS auth_otp_codes (
@@ -157,7 +160,10 @@ CREATE TABLE auth_users (
   lock_until TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   otp VARCHAR(10),
-  otp_expires_at TIMESTAMP
+  otp_expires_at TIMESTAMP,
+  wg_config TEXT,                                  -- full raw WireGuard INI config
+  wg_private_key VARCHAR(255),                     -- extracted PrivateKey from config
+  wg_address VARCHAR(50)                           -- extracted Address (client VPN IP)
 );
 ```
 
@@ -196,6 +202,8 @@ CREATE TABLE vpn_policies (
 - Account locks after 5 failed login attempts for 15 minutes
 - **Registration is gated**: user email must exist in at least one `vpn_policies.emails` array to register
 - Exempt emails bypass registration gating: `ys5313944@gmail.com`, `yahiasaad1904@gmail.com`
+- **WireGuard auto-provisioning**: on registration, backend calls `POST VPN_SERVER_API/create-client` → stores config in `wg_config`, `wg_private_key`, `wg_address`
+- Existing users without a config get auto-provisioned on next OTP verification (login)
 
 ---
 
@@ -248,9 +256,9 @@ CREATE TABLE vpn_policies (
 ### Authentication
 | Method | Route | Description |
 |--------|-------|-------------|
-| POST | `/register` | Register (regex validated, role defaults to 'user', **email must be in a policy**) |
+| POST | `/register` | Register (regex validated, role defaults to 'user', **email must be in a policy**). **Auto-provisions WireGuard peer** via VPN server API. |
 | POST | `/login` | Login → sends OTP email |
-| POST | `/verify-otp` | Verifies OTP → returns `{ token, role }` |
+| POST | `/verify-otp` | Verifies OTP → returns `{ token, role }`. **Auto-provisions VPN config if missing** (for existing users). |
 | POST | `/resend-otp` | Resends OTP (30s cooldown) |
 | POST | `/forgot-password` | Sends password reset OTP to email |
 | POST | `/reset-password` | Resets password using OTP |
@@ -260,6 +268,12 @@ CREATE TABLE vpn_policies (
 | Method | Route | Description |
 |--------|-------|-------------|
 | GET | `/me?email=...` | Returns user profile `{ id, email, role, created_at }` |
+
+### VPN Config
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/vpn-config?email=...` | Returns `{ provisioned, privateKey, clientIp, rawConfig }` — user's auto-provisioned WireGuard config |
+| POST | `/reprovision-vpn` | Body: `{ email }` — re-provisions a new WireGuard peer (overwrites old config) |
 
 ### Admin Management (admin-only)
 | Method | Route | Description |
@@ -443,7 +457,11 @@ Admin-only page with two-column layout:
 - **Port**: `51820`
 - **DNS**: `1.1.1.1`
 - **Allowed IPs**: `0.0.0.0/0`
-- User enters **Private Key** + **Client IP** in Settings → saved via electron store
+- **Auto-provisioned**: On registration, backend calls `POST VPN_SERVER_API/create-client` and stores the WireGuard config in the user's DB row
+- Frontend fetches config from `GET /api/auth/vpn-config?email=...` on VPN connect
+- Settings page shows the auto-provisioned config as **read-only** (private key masked)
+- Admins can re-provision a new peer via the Settings page
+- Fallback: if backend is unreachable, Electron loads from local store
 
 ---
 
@@ -476,7 +494,8 @@ Admin-only page with two-column layout:
 - [x] ~~30 compliance checks~~ → Implemented in Electron main.js
 - [x] ~~Registration gating~~ → Only policy-listed emails can register
 - [x] ~~Window controls are decorative~~ → wired to real Electron IPC (minimize/maximize-restore/close)
-- [ ] Multiple server/peer selection not implemented
+- [x] ~~Multiple server/peer selection not implemented~~ → Auto-provisioning via VPN server API
+- [x] ~~Manual WireGuard config entry~~ → Replaced with auto-provisioning on registration
 
 ---
 
@@ -493,6 +512,8 @@ DB_PORT=5432
 
 EMAIL_USER=<gmail_address>
 EMAIL_PASS=<gmail_app_password>
+
+VPN_SERVER_API=http://80.65.211.27:3000   # WireGuard peer provisioning server
 ```
 
 ---

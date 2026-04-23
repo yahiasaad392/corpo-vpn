@@ -25,7 +25,7 @@ export class AuthService {
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
-      const exemptEmails = ['ys5313944@gmail.com', 'yahiasaad1904@gmail.com'];
+      const exemptEmails = (process.env.ADMIN_EMAIL || '').split(',').map(e => e.trim()).filter(Boolean);
 
       if (!emailRegex.test(email)) {
         throw new BadRequestException('Invalid email format');
@@ -325,7 +325,7 @@ export class AuthService {
     if (callerEmail === targetEmail) {
       throw new BadRequestException("You cannot demote yourself");
     }
-    if (targetEmail === 'ys5313944@gmail.com') {
+    if (targetEmail === process.env.ADMIN_EMAIL) {
       throw new BadRequestException("Cannot demote the root admin");
     }
 

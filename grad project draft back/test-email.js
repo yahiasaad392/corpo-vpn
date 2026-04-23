@@ -5,8 +5,8 @@ dotenv.config();
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'ys5313944@gmail.com',
-    pass: 'kcqifpkugavenkpq',
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -14,8 +14,8 @@ async function test() {
   console.log('--- Testing Email with App Password ---');
   try {
     await transporter.sendMail({
-      from: 'ys5313944@gmail.com',
-      to: 'ys5313944@gmail.com',
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_USER,
       subject: "Test from VPN Backend",
       text: "If you see this, the App Password works!"
     });

@@ -4,7 +4,7 @@
 export const hqGateway = {
   name: "Corpo VPN Gateway",
   location: "Contabo VPS — Germany",
-  gatewayIp: "80.65.211.27",
+  gatewayIp: "203.0.113.50",
   protocol: "WireGuard",
   encryption: "ChaCha20-Poly1305",
   uptime: "99.99%",
@@ -30,7 +30,7 @@ export const corporateResources = [
 // ============================================================
 export const connectionStats = {
   internalIp: "10.10.0.3",
-  externalIp: "80.65.211.27",
+  externalIp: "203.0.113.50",
   sessionDuration: "00:00:00",
   dataTransferred: "0 B",
   downloadSpeed: "-- Mbps",
@@ -43,7 +43,7 @@ export const connectionStats = {
 export const initialLogs = [
   { id: 1,  time: '09:00:01', level: 'info',    message: 'System initialization complete.' },
   { id: 2,  time: '09:00:05', level: 'info',    message: 'Local identity check passed.' },
-  { id: 3,  time: '09:00:10', level: 'info',    message: 'Attempting WireGuard handshake to 80.65.211.27:51820...' },
+  { id: 3,  time: '09:00:10', level: 'info',    message: 'Attempting WireGuard handshake to 203.0.113.50:51820...' },
   { id: 4,  time: '09:00:12', level: 'info',    message: 'Peer public key exchange in progress...' },
   { id: 5,  time: '09:00:15', level: 'info',    message: 'WireGuard handshake completed successfully.' },
   { id: 6,  time: '09:00:16', level: 'info',    message: 'Tunnel established. Virtual IP: 10.10.0.3.' },
@@ -52,7 +52,7 @@ export const initialLogs = [
 ];
 
 export const liveLogs = [
-  { level: 'info',    message: 'WireGuard keepalive sent to 80.65.211.27.' },
+  { level: 'info',    message: 'WireGuard keepalive sent to 203.0.113.50.' },
   { level: 'info',    message: 'Session heart-beat: OK.' },
   { level: 'warning', message: 'Latency spike detected on endpoint.' },
   { level: 'info',    message: 'WireGuard re-keying initiated.' },

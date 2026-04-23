@@ -4,6 +4,9 @@ const os = require('os')
 const fs = require('fs')
 const { exec } = require('child_process')
 
+// Load environment variables from .env in project root
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') })
+
 const isDev = process.env.NODE_ENV !== 'production'
 
 // ─────────────────────────────────────────────────────────────
@@ -375,8 +378,9 @@ const CONFIG_DIR  = path.join(app.getPath('userData'), 'wireguard')
 const CONF_PATH   = path.join(CONFIG_DIR, `${TUNNEL_NAME}.conf`)
 const SAVED_CONFIG_PATH = path.join(app.getPath('userData'), 'vpn-config.json')
 
-const SERVER_PUBLIC_KEY = 'pxtdzwoT1chXA+h/ZYWXrJMTz/Vr8oc29u7h+/KgxUQ='
-const SERVER_ENDPOINT   = '80.65.211.27:51820'
+const SERVER_PUBLIC_KEY = process.env.WG_SERVER_PUBLIC_KEY || ''
+const SERVER_ENDPOINT   = process.env.WG_SERVER_ENDPOINT || ''
+const SERVER_IP         = SERVER_ENDPOINT.split(':')[0]
 const SERVER_DNS        = '1.1.1.1'
 const ALLOWED_IPS       = '0.0.0.0/0'
 
@@ -533,7 +537,7 @@ ipcMain.handle('vpn:diagnose', async () => {
   }
 
   // Ping check
-  const ping = await pingServer('80.65.211.27')
+  const ping = await pingServer(SERVER_IP)
 
   return {
     wireguardInstalled: !!wgGuardExe,
@@ -567,11 +571,11 @@ ipcMain.handle('vpn:connect', async (_event, clientConfig) => {
   }
 
   // ── Step 1: Ping the server FIRST ──
-  const ping = await pingServer('80.65.211.27')
+  const ping = await pingServer(SERVER_IP)
   if (!ping.reachable) {
     return {
       success: false,
-      error: 'Cannot reach server 80.65.211.27. Check your internet connection and verify the server is online.',
+      error: `Cannot reach server ${SERVER_IP}. Check your internet connection and verify the server is online.`,
     }
   }
 
