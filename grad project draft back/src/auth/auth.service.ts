@@ -34,8 +34,11 @@ export class AuthService {
         throw new BadRequestException('Password must be 8+ chars, have upper/lower/special characters');
       }
 
+      const existingUser = await this.db.pool.query("SELECT password_hash, role FROM auth_users WHERE email=$1", [email]);
+      const isPendingAdmin = existingUser.rows.length > 0 && existingUser.rows[0].password_hash === 'PENDING_REGISTRATION';
+
       // Check if email is in any company policy (only policy-listed emails can register)
-      if (!exemptEmails.includes(email)) {
+      if (!exemptEmails.includes(email) && !isPendingAdmin) {
         const policyCheck = await this.db.pool.query(
           "SELECT id FROM vpn_policies WHERE $1 = ANY(emails) LIMIT 1",
           [email]
@@ -46,13 +49,27 @@ export class AuthService {
       }
 
       const hash = await bcrypt.hash(password, 10);
-      // All new registrations are 'user' role by default
-      await this.db.pool.query(
-        "INSERT INTO auth_users(email, password_hash, role) VALUES($1, $2, 'user')",
-        [email, hash]
-      );
-      console.log('✅ User registered successfully');
-      return { message: "User registered" };
+      
+      if (existingUser.rows.length > 0) {
+        if (isPendingAdmin) {
+          await this.db.pool.query(
+            "UPDATE auth_users SET password_hash=$1 WHERE email=$2",
+            [hash, email]
+          );
+          console.log(`✅ Pending admin ${email} registered successfully`);
+          return { message: "Admin account registered successfully" };
+        } else {
+          throw new HttpException('User already exists', HttpStatus.CONFLICT);
+        }
+      } else {
+        // All new registrations are 'user' role by default
+        await this.db.pool.query(
+          "INSERT INTO auth_users(email, password_hash, role) VALUES($1, $2, 'user')",
+          [email, hash]
+        );
+        console.log('✅ User registered successfully');
+        return { message: "User registered" };
+      }
     } catch (error) {
       console.error('❌ Register Error:', error.message);
       if (error.code === '23505') throw new HttpException('User already exists', HttpStatus.CONFLICT);
@@ -304,9 +321,17 @@ export class AuthService {
       "SELECT id, role FROM auth_users WHERE email=$1",
       [targetEmail]
     );
+
     if (target.rows.length === 0) {
-      throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+      // User doesn't exist yet — create them as admin pending registration
+      await this.db.pool.query(
+        "INSERT INTO auth_users(email, password_hash, role) VALUES($1, 'PENDING_REGISTRATION', 'admin')",
+        [targetEmail]
+      );
+      console.log(`✅ ${targetEmail} created as admin (pending registration) by ${callerEmail}`);
+      return { message: `${targetEmail} has been added as an admin. They can now register their account.` };
     }
+
     if (target.rows[0].role === 'admin') {
       throw new BadRequestException("User is already an admin");
     }
