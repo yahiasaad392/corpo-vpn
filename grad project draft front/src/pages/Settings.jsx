@@ -3,6 +3,7 @@ import ToggleSwitch from '../components/ToggleSwitch'
 import { ChevronDown, Save, CheckCircle, Key, Wifi, AlertTriangle, Crown, UserPlus, UserMinus, Trash2, RefreshCw, ShieldCheck, Loader2 } from 'lucide-react'
 
 const API = 'http://127.0.0.1:3001/api/auth'
+const VPN_API = 'http://127.0.0.1:3001/api/vpn'
 
 const PROTOCOLS = ['WireGuard', 'OpenVPN (UDP)', 'OpenVPN (TCP)', 'IKEv2']
 
@@ -142,7 +143,7 @@ export default function Settings() {
   useEffect(() => {
     if (currentUser?.email) {
       setConfigLoading(true)
-      fetch(`${API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+      fetch(`${VPN_API}/config?email=${encodeURIComponent(currentUser.email)}`)
         .then(r => r.json())
         .then(data => {
           if (data.provisioned) {
@@ -163,7 +164,7 @@ export default function Settings() {
     setReprovisionSuccess(false)
     setConfigError(null)
     try {
-      const res = await fetch(`${API}/reprovision-vpn`, {
+      const res = await fetch(`${VPN_API}/reprovision`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: currentUser.email }),
@@ -172,7 +173,7 @@ export default function Settings() {
       if (!res.ok) throw new Error(data.message || 'Re-provision failed')
       
       // Refresh config
-      const configRes = await fetch(`${API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+      const configRes = await fetch(`${VPN_API}/config?email=${encodeURIComponent(currentUser.email)}`)
       const configData = await configRes.json()
       if (configData.provisioned) {
         setVpnConfig(configData)

@@ -16,3 +16,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Sensitive / local-only files
+CONTEXT.md
+**/nuke-db.js
+**/test-email.js
+**/setup-db.js

@@ -8,6 +8,7 @@ import { ALL_CHECKS_MAP } from '../data/complianceChecks'
 
 const POLICY_API = 'http://127.0.0.1:3001/api/policy'
 const AUTH_API = 'http://127.0.0.1:3001/api/auth'
+const VPN_API = 'http://127.0.0.1:3001/api/vpn'
 
 export default function Dashboard() {
   // Check user role
@@ -30,13 +31,14 @@ export default function Dashboard() {
   const [policyLoaded, setPolicyLoaded] = useState(false)
   
   const statusInterval = useRef(null)
+  const [activeSessionId, setActiveSessionId] = useState(null)
 
   const isElectron = !!window.electronAPI?.vpnConnect
 
   // Load VPN config from backend (auto-provisioned) and show IP
   useEffect(() => {
     if (currentUser?.email) {
-      fetch(`${AUTH_API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+      fetch(`${VPN_API}/config?email=${encodeURIComponent(currentUser.email)}`)
         .then(r => r.json())
         .then(data => {
           if (data.provisioned && data.clientIp) {
@@ -161,7 +163,7 @@ export default function Dashboard() {
 
   const fetchVpnConfig = async () => {
     try {
-      const res = await fetch(`${AUTH_API}/vpn-config?email=${encodeURIComponent(currentUser.email)}`)
+      const res = await fetch(`${VPN_API}/config?email=${encodeURIComponent(currentUser.email)}`)
       const data = await res.json()
       if (data.provisioned && data.privateKey && data.clientIp) {
         return { privateKey: data.privateKey, clientIp: data.clientIp }
@@ -169,6 +171,45 @@ export default function Dashboard() {
       return null
     } catch {
       return null
+    }
+  }
+
+  // ─── Helper: Start VPN session via backend ─────────────────────
+
+  const startVpnSession = async (complianceResults = null) => {
+    try {
+      const res = await fetch(`${VPN_API}/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: currentUser.email,
+          complianceResults,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Backend rejected connection')
+      }
+      return data // { sessionId, privateKey, clientIp, connectedAt, complianceStatus }
+    } catch (err) {
+      throw err
+    }
+  }
+
+  // ─── Helper: End VPN session via backend ───────────────────────
+
+  const endVpnSession = async () => {
+    try {
+      await fetch(`${VPN_API}/disconnect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: currentUser.email,
+          sessionId: activeSessionId,
+        }),
+      })
+    } catch (e) {
+      console.warn('Session disconnect notification failed:', e)
     }
   }
 
@@ -183,6 +224,9 @@ export default function Dashboard() {
         const res = await window.electronAPI.vpnDisconnect()
         if (!res.success) setError(res.error)
       }
+      // Notify backend to end session
+      await endVpnSession()
+      setActiveSessionId(null)
       setStatus('disconnected')
       setTimer(0)
       setLiveStats({ rx: '0 B', tx: '0 B', handshake: '--', endpoint: '--' })
@@ -195,25 +239,35 @@ export default function Dashboard() {
       setStatus('connecting')
 
       if (!isElectron) {
-        setTimeout(() => setStatus('connected'), 2000)
+        // Browser mock — call backend session API, then simulate connection
+        try {
+          const session = await startVpnSession(null)
+          setActiveSessionId(session.sessionId)
+          setClientIp(session.clientIp)
+          setTimeout(() => setStatus('connected'), 2000)
+        } catch (err) {
+          setError(err.message)
+          setStatus('error')
+        }
         return
       }
 
-      // Fetch config from backend (auto-provisioned)
-      const vpnConfig = await fetchVpnConfig()
-
-      // Fallback to local Electron store
-      const config = vpnConfig || await window.electronAPI.vpnLoadConfig()
-      if (!config?.privateKey || !config?.clientIp) {
-        setError('No WireGuard config found. Your VPN peer has not been provisioned yet. Contact the server admin.')
+      // Start backend session (gets credentials)
+      let session
+      try {
+        session = await startVpnSession(null)
+      } catch (err) {
+        setError(err.message)
         setStatus('error')
         return
       }
 
-      setClientIp(config.clientIp)
+      setActiveSessionId(session.sessionId)
+      setClientIp(session.clientIp)
+
       const res = await window.electronAPI.vpnConnect({
-        privateKey: config.privateKey,
-        clientIp: config.clientIp,
+        privateKey: session.privateKey,
+        clientIp: session.clientIp,
       })
 
       if (res.success) {
@@ -227,14 +281,31 @@ export default function Dashboard() {
         }
         setStatus('connected')
       } else {
+        // ── ROLLBACK: VPN connect failed, end backend session ──
+        await endVpnSession()
+        setActiveSessionId(null)
         setError(res.error)
         setStatus('disconnected')
       }
       return
     }
 
-    // ── USER: STEP 1 — COMPLIANCE SCAN ──
+    // ── USER: STEP 1 — FETCH LATEST POLICY + COMPLIANCE SCAN ──
     setStatus('connecting')
+
+    // Re-fetch policy in real-time (admin may have updated it)
+    let freshPolicy = userPolicy
+    try {
+      const policyRes = await fetch(`${POLICY_API}/my-policy?email=${encodeURIComponent(currentUser.email)}`)
+      const policyData = await policyRes.json()
+      if (policyData.found) {
+        freshPolicy = policyData.policy
+        setUserPolicy(freshPolicy) // Update state so sidebar shows new checks immediately
+      }
+    } catch (e) {
+      console.warn('Policy refresh failed, using cached policy:', e)
+    }
+
     const results = await handleComplianceScan()
     
     if (!results) {
@@ -243,9 +314,9 @@ export default function Dashboard() {
       return
     }
 
-    // Evaluate results against policy
-    const criticalIds = userPolicy?.critical_checks || []
-    const warningIds = userPolicy?.warning_checks || []
+    // Evaluate results against the FRESH policy
+    const criticalIds = freshPolicy?.critical_checks || []
+    const warningIds = freshPolicy?.warning_checks || []
 
     const criticalFails = criticalIds.filter(id => results[id] && !results[id].pass)
     const warningFails = warningIds.filter(id => results[id] && !results[id].pass)
@@ -272,39 +343,56 @@ export default function Dashboard() {
 
     // ── CRITICAL FAILURES → BLOCK ──
     if (criticalFails.length > 0) {
+      localStorage.setItem('vpn_compliance_status', 'non-compliant')
+      window.dispatchEvent(new Event('compliance-update'))
       setError(`Device non-compliant. ${criticalFails.length} critical check(s) failed. See sidebar for details.`)
       setStatus('disconnected')
       return
     }
 
-    // ── WARNING ONLY → proceed to connect (admins already notified above) ──
+    // ── WARNING ONLY → proceed but update status ──
+    if (warningFails.length > 0) {
+      localStorage.setItem('vpn_compliance_status', 'warning')
+      window.dispatchEvent(new Event('compliance-update'))
+    } else {
+      localStorage.setItem('vpn_compliance_status', 'compliant')
+      window.dispatchEvent(new Event('compliance-update'))
+    }
 
-    // ── STEP 2: VPN CONNECT ──
+    // ── STEP 2: VPN CONNECT via backend session ──
     if (!isElectron) {
-      // Browser mock — simulate handshake
-      setTimeout(() => {
-        setStatus('connected')
-        setShowCompliance(false)
-      }, 2000)
+      // Browser mock — start session via backend
+      try {
+        const session = await startVpnSession(results)
+        setActiveSessionId(session.sessionId)
+        setClientIp(session.clientIp)
+        setTimeout(() => {
+          setStatus('connected')
+          if (warningFails.length === 0) setShowCompliance(false)
+        }, 2000)
+      } catch (err) {
+        setError(err.message)
+        setStatus('disconnected')
+      }
       return
     }
 
-    // Fetch config from backend (auto-provisioned)
-    const vpnConfig = await fetchVpnConfig()
-
-    // Fallback to local Electron store
-    const config = vpnConfig || await window.electronAPI.vpnLoadConfig()
-    if (!config?.privateKey || !config?.clientIp) {
-      setError('No WireGuard config found. Your VPN peer has not been provisioned yet. Contact your admin.')
-      setStatus('error')
+    // Start backend session (validates compliance server-side + returns credentials)
+    let session
+    try {
+      session = await startVpnSession(results)
+    } catch (err) {
+      setError(err.message)
+      setStatus('disconnected')
       return
     }
 
-    setClientIp(config.clientIp)
+    setActiveSessionId(session.sessionId)
+    setClientIp(session.clientIp)
 
     const res = await window.electronAPI.vpnConnect({
-      privateKey: config.privateKey,
-      clientIp: config.clientIp,
+      privateKey: session.privateKey,
+      clientIp: session.clientIp,
     })
 
     if (res.success) {
@@ -321,10 +409,13 @@ export default function Dashboard() {
       // Keep sidebar open if there were warnings
       if (warningFails.length === 0) setShowCompliance(false)
     } else {
+      // ── ROLLBACK: VPN connect failed, end backend session ──
+      await endVpnSession()
+      setActiveSessionId(null)
       setError(res.error)
       setStatus('disconnected')
     }
-  }, [status, isElectron, isAdmin, userPolicy, currentUser?.email])
+  }, [status, isElectron, isAdmin, userPolicy, currentUser?.email, activeSessionId])
 
   return (
     <div className="relative min-h-screen">

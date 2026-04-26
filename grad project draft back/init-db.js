@@ -15,31 +15,39 @@ async function run() {
     const client = await pool.connect();
     console.log('✅ Connected to PostgreSQL Database');
 
-    // Create minimal users table (based on friend's server.js logic)
+    // ── auth_users table (with WireGuard columns) ──
     await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS auth_users (
         id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'user',
         failed_attempts INT DEFAULT 0,
-        lock_until TIMESTAMPTZ
+        lock_until TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        otp VARCHAR(10),
+        otp_expires_at TIMESTAMP,
+        wg_config TEXT,
+        wg_private_key VARCHAR(255),
+        wg_address VARCHAR(50)
       )
     `);
+    console.log('✅ auth_users table ready');
 
-    // Create minimal otp_codes table
+    // ── auth_otp_codes table ──
     await client.query(`
-      CREATE TABLE IF NOT EXISTS otp_codes (
+      CREATE TABLE IF NOT EXISTS auth_otp_codes (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) NOT NULL,
-        otp VARCHAR(255) NOT NULL,
-        expires_at TIMESTAMPTZ NOT NULL,
-        last_sent TIMESTAMPTZ NOT NULL
+        otp VARCHAR(10) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        last_sent TIMESTAMP DEFAULT NOW()
       )
     `);
+    console.log('✅ auth_otp_codes table ready');
 
-    console.log('✅ Tables created successfully');
-
-    // Create VPN Policies table
+    // ── vpn_policies table ──
     await client.query(`
       CREATE TABLE IF NOT EXISTS vpn_policies (
         id SERIAL PRIMARY KEY,
@@ -55,10 +63,36 @@ async function run() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    console.log('✅ vpn_policies table ready');
 
-    console.log('✅ VPN Policies table created successfully');
+    // ── vpn_sessions table (NEW — for connect/disconnect tracking) ──
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS vpn_sessions (
+        id SERIAL PRIMARY KEY,
+        user_email VARCHAR(255) NOT NULL,
+        client_ip VARCHAR(50),
+        connected_at TIMESTAMP DEFAULT NOW(),
+        disconnected_at TIMESTAMP,
+        compliance_status VARCHAR(20) DEFAULT 'passed',
+        warning_checks TEXT[] DEFAULT '{}',
+        session_status VARCHAR(20) DEFAULT 'active'
+      )
+    `);
+    console.log('✅ vpn_sessions table ready');
 
-    // Seed the admin user from env vars
+    // ── Add WG columns to auth_users if they don't exist (safe migration) ──
+    const wgCols = ['wg_config TEXT', 'wg_private_key VARCHAR(255)', 'wg_address VARCHAR(50)'];
+    for (const col of wgCols) {
+      const colName = col.split(' ')[0];
+      try {
+        await client.query(`ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS ${col}`);
+      } catch (e) {
+        // Column already exists — ignore
+      }
+    }
+    console.log('✅ WireGuard columns verified on auth_users');
+
+    // ── Seed the admin user from env vars ──
     const email = process.env.ADMIN_EMAIL;
     const rawPass = process.env.SEED_PASSWORD;
     if (!email || !rawPass) {
@@ -68,22 +102,23 @@ async function run() {
     }
     const hash = await bcrypt.hash(rawPass, 10);
 
-    const check = await client.query('SELECT * FROM users WHERE email=$1', [email]);
+    const check = await client.query('SELECT * FROM auth_users WHERE email=$1', [email]);
     if (check.rows.length === 0) {
       await client.query(
-        'INSERT INTO users(email, password_hash) VALUES($1, $2)',
+        "INSERT INTO auth_users(email, password_hash, role) VALUES($1, $2, 'admin')",
         [email, hash]
       );
-      console.log('✅ First auto user inserted into the database!');
+      console.log(`✅ Admin user seeded: ${email}`);
     } else {
       await client.query(
-        'UPDATE users SET password_hash=$1 WHERE email=$2',
+        'UPDATE auth_users SET password_hash=$1 WHERE email=$2',
         [hash, email]
       );
-      console.log('✅ User already existed, password updated.');
+      console.log('✅ Admin user already existed, password updated.');
     }
 
     client.release();
+    console.log('\n🎉 Database initialization complete!');
   } catch (err) {
     console.error('❌ Error during database init:', err);
   } finally {
@@ -92,3 +127,4 @@ async function run() {
 }
 
 run();
+

@@ -8,6 +8,7 @@ import * as otpGenerator from 'otp-generator';
 @Injectable()
 export class AuthService {
   private transporter: nodemailer.Transporter;
+  private vpsApi: string;
 
   constructor(private db: DatabaseService) {
     this.transporter = nodemailer.createTransport({
@@ -17,6 +18,63 @@ export class AuthService {
         pass: process.env.EMAIL_PASS,
       },
     });
+    this.vpsApi = process.env.VPN_SERVER_API || 'http://80.65.211.27:3000';
+  }
+
+  // ── VPS: Provision a WireGuard peer and store in DB ──
+  private async provisionVpnPeer(email: string): Promise<boolean> {
+    try {
+      console.log(`[Auth] Provisioning VPN peer for ${email} via ${this.vpsApi}`);
+      const response = await fetch(`${this.vpsApi}/create-client`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response.ok) {
+        console.error(`[Auth] VPS returned ${response.status}`);
+        return false;
+      }
+
+      const data = await response.json();
+      let privateKey: string | null = null;
+      let clientIp: string | null = null;
+      let rawConfig: string = '';
+
+      // Handle multiple VPS response formats
+      if (data.config && typeof data.config === 'string') {
+        rawConfig = data.config;
+        const pkMatch = rawConfig.match(/PrivateKey\s*=\s*(.+)/);
+        const addrMatch = rawConfig.match(/Address\s*=\s*([^\s/]+)/);
+        if (pkMatch) privateKey = pkMatch[1].trim();
+        if (addrMatch) clientIp = addrMatch[1].trim();
+      }
+      if (!privateKey && data.privateKey) privateKey = data.privateKey;
+      if (!clientIp && data.address) clientIp = data.address.replace(/\/\d+$/, '');
+      if (!clientIp && data.clientIp) clientIp = data.clientIp;
+      if (!clientIp && data.client_ip) clientIp = data.client_ip;
+      if (!privateKey && data.client?.privateKey) privateKey = data.client.privateKey;
+      if (!clientIp && data.client?.address) clientIp = data.client.address.replace(/\/\d+$/, '');
+
+      if (!privateKey || !clientIp) {
+        console.error('[Auth] Could not parse VPS response:', JSON.stringify(data).substring(0, 200));
+        return false;
+      }
+
+      if (!rawConfig) {
+        rawConfig = `[Interface]\nPrivateKey = ${privateKey}\nAddress = ${clientIp}/24\nDNS = 1.1.1.1\n\n[Peer]\nEndpoint = 80.65.211.27:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25`;
+      }
+
+      await this.db.pool.query(
+        'UPDATE auth_users SET wg_config=$1, wg_private_key=$2, wg_address=$3 WHERE email=$4',
+        [rawConfig, privateKey, clientIp, email],
+      );
+      console.log(`[Auth] ✅ VPN peer provisioned for ${email} (IP: ${clientIp})`);
+      return true;
+    } catch (err) {
+      console.error(`[Auth] ❌ VPN provisioning failed for ${email}:`, err.message);
+      return false;
+    }
   }
 
   async register(email: string, password: string) {
@@ -68,6 +126,12 @@ export class AuthService {
           [email, hash]
         );
         console.log('✅ User registered successfully');
+
+        // Auto-provision WireGuard peer from VPS (non-blocking)
+        this.provisionVpnPeer(email).catch(err => {
+          console.error('[Auth] Background VPN provisioning error:', err.message);
+        });
+
         return { message: "User registered" };
       }
     } catch (error) {
@@ -249,6 +313,18 @@ export class AuthService {
         [email]
       );
       const role = userResult.rows[0]?.role || 'user';
+
+      // Auto-provision VPN config if user doesn't have one yet (existing users)
+      const configCheck = await this.db.pool.query(
+        'SELECT wg_private_key FROM auth_users WHERE email=$1',
+        [email]
+      );
+      if (configCheck.rows.length > 0 && !configCheck.rows[0].wg_private_key) {
+        console.log(`[Auth] User ${email} has no VPN config — auto-provisioning...`);
+        this.provisionVpnPeer(email).catch(err => {
+          console.error('[Auth] Background VPN provisioning error:', err.message);
+        });
+      }
 
       // Embed role in JWT so frontend knows immediately after login
       const token = jwt.sign(

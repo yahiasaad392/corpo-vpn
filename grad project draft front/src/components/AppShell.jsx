@@ -5,6 +5,9 @@ import { Shield, LayoutDashboard, Share2, Settings, FileText, LogOut, Crown, Use
 export default function AppShell() {
   const navigate = useNavigate()
   const [isMaximized, setIsMaximized] = useState(false)
+  const [complianceStatus, setComplianceStatus] = useState(() => {
+    return localStorage.getItem('vpn_compliance_status') || 'pending'
+  })
 
   // Read user info + role from localStorage
   let currentUser = null
@@ -30,7 +33,43 @@ export default function AppShell() {
     return cleanup
   }, [])
 
-  const handleSignOut = () => {
+  // ── Listen for compliance status changes ──
+  useEffect(() => {
+    const handler = () => {
+      setComplianceStatus(localStorage.getItem('vpn_compliance_status') || 'pending')
+    }
+    window.addEventListener('compliance-update', handler)
+    window.addEventListener('storage', handler)
+    return () => {
+      window.removeEventListener('compliance-update', handler)
+      window.removeEventListener('storage', handler)
+    }
+  }, [])
+
+  const handleSignOut = async () => {
+    // Disconnect VPN tunnel if running
+    try {
+      if (window.electronAPI?.vpnDisconnect) {
+        await window.electronAPI.vpnDisconnect()
+      }
+    } catch (e) {
+      console.warn('VPN disconnect on sign-out failed:', e)
+    }
+
+    // End backend VPN session
+    try {
+      const email = currentUser?.email
+      if (email) {
+        await fetch('http://127.0.0.1:3001/api/vpn/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+      }
+    } catch (e) {
+      console.warn('Session end on sign-out failed:', e)
+    }
+
     localStorage.removeItem('vpn_token')
     localStorage.removeItem('vpn_user')
     navigate('/', { replace: true })
@@ -57,7 +96,7 @@ export default function AppShell() {
   return (
     <div className="h-screen w-full bg-[#060818] flex flex-col overflow-hidden select-none">
       {/* ─── Native Titlebar (draggable + window controls) ─── */}
-      <div className="titlebar h-9 bg-[#080a1e] border-b border-white/5 flex items-center justify-between px-3 shrink-0">
+      <div className="titlebar h-9 bg-[#080a1e] border-b border-white/5 flex items-center justify-between px-3 shrink-0 z-50 relative">
         <div className="flex items-center gap-2 pointer-events-none">
           <Shield size={13} className="text-cyan-500" />
           <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Corpo VPN</span>
@@ -196,9 +235,25 @@ export default function AppShell() {
           <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between z-10 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-slate-500">Security Status:</span>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold uppercase tracking-wider">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Compliant
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider ${
+                complianceStatus === 'compliant'
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                  : complianceStatus === 'warning'
+                  ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+                  : complianceStatus === 'non-compliant'
+                  ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                  : 'bg-slate-500/10 border border-slate-500/20 text-slate-400'
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  complianceStatus === 'compliant' ? 'bg-emerald-500 animate-pulse'
+                  : complianceStatus === 'warning' ? 'bg-amber-500 animate-pulse'
+                  : complianceStatus === 'non-compliant' ? 'bg-red-500 animate-pulse'
+                  : 'bg-slate-500'
+                }`} />
+                {complianceStatus === 'compliant' ? 'Compliant'
+                  : complianceStatus === 'warning' ? 'Warnings'
+                  : complianceStatus === 'non-compliant' ? 'Non-Compliant'
+                  : 'Pending'}
               </div>
             </div>
 

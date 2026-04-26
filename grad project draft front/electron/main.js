@@ -579,8 +579,10 @@ ipcMain.handle('vpn:connect', async (_event, clientConfig) => {
     }
   }
 
-  // ── Step 2: Clean up any leftover tunnel from a previous failed attempt ──
+  // ── Step 2: Clean up any leftover tunnel from a previous session ──
   await forceRemoveTunnel()
+  // Give Windows time to fully release the service before reinstalling
+  await new Promise(r => setTimeout(r, 1500))
 
   // ── Step 3: Write the .conf file ──
   const confContent = [
@@ -601,15 +603,30 @@ ipcMain.handle('vpn:connect', async (_event, clientConfig) => {
   }
   fs.writeFileSync(CONF_PATH, confContent, 'utf-8')
 
-  // ── Step 4: Install the tunnel service ──
-  try {
-    await runCmd(`"${wgExe}" /installtunnelservice "${CONF_PATH}"`, 15000)
-  } catch (err) {
-    // Clean up on failure
+  // ── Step 4: Install the tunnel service (with automatic retry) ──
+  let installSuccess = false
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await runCmd(`"${wgExe}" /installtunnelservice "${CONF_PATH}"`, 15000)
+      installSuccess = true
+      break
+    } catch (err) {
+      console.warn(`[CorpoVPN] Tunnel install attempt ${attempt} failed: ${err.message}`)
+      if (attempt === 1) {
+        // First attempt failed — clean up stale service and retry
+        await forceRemoveTunnel()
+        await new Promise(r => setTimeout(r, 2000))
+        // Rewrite the conf file (may have been deleted during cleanup)
+        fs.writeFileSync(CONF_PATH, confContent, 'utf-8')
+      }
+    }
+  }
+
+  if (!installSuccess) {
     try { fs.unlinkSync(CONF_PATH) } catch {}
     return {
       success: false,
-      error: `Failed to start tunnel: ${err.message}. Make sure the app is running as Administrator.`,
+      error: 'Failed to start WireGuard tunnel service. Please try connecting again.',
     }
   }
 

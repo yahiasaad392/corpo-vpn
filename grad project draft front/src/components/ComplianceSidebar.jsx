@@ -42,7 +42,7 @@ export default function ComplianceSidebar({ isVisible, results, isScanning, onRe
   ]
 
   return (
-    <div className={`fixed right-0 top-0 h-full w-80 bg-[#060818]/95 backdrop-blur-xl border-l border-white/10 z-40 transform transition-transform duration-500 ease-out shadow-[-20px_0_50px_rgba(0,0,0,0.5)] ${isVisible || isScanning ? 'translate-x-0' : 'translate-x-full'}`}>
+    <div className={`fixed right-0 top-9 h-[calc(100%-2.25rem)] w-80 bg-[#060818]/95 backdrop-blur-xl border-l border-white/10 z-40 transform transition-transform duration-500 ease-out shadow-[-20px_0_50px_rgba(0,0,0,0.5)] ${isVisible || isScanning ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="p-6 h-full flex flex-col">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
