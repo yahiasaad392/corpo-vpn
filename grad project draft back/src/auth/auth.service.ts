@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { memoryLogs } from "../system-logs";
+import { getPersistedLogs } from "../system-logs";
 
 
 @Injectable()
@@ -322,7 +322,7 @@ export class AuthService {
 
   async getAuditLogs(callerEmail: string) {
     await this.requireAdmin(callerEmail);
-    return memoryLogs;
+    return getPersistedLogs(7);
   }
 
   async getUserProfile(email: string) {

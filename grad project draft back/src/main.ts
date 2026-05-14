@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { hijackConsole } from './system-logs';
+import { hijackConsole, initSystemLogs } from './system-logs';
+import { DatabaseService } from './database/database.service';
 
 async function bootstrap() {
   hijackConsole();
@@ -19,6 +20,10 @@ async function bootstrap() {
   // This prevents the dreaded Node 18 IPv6 loopback "Failed to fetch" edge-case
   // where the frontend targets 127.0.0.1 but the backend bound to [::1].
   await app.listen(port, '0.0.0.0');
+
+  // Initialize persistent system logs after DB is ready
+  const dbService = app.get(DatabaseService);
+  await initSystemLogs(dbService.pool);
   
   console.log(`Backend is running and actively listening on port ${port}...`);
 }
