@@ -203,13 +203,43 @@ function DashboardMockup() {
   )
 }
 
+function AnimatedCard({ children, className = "" }) {
+  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
+  const cardRef = React.useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      className={`relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-6 transition-all duration-500 group hover:-translate-y-1 hover:border-cyan-500/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] ${className}`}
+    >
+      <div
+        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(6,182,212,0.15), transparent 40%)`,
+        }}
+      />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
 function FeatureCard({ feature }) {
   return (
-    <div className="glass-card p-6 hover:bg-white/8 hover:border-cyan-500/20 transition-all duration-300 group hover:-translate-y-1">
-      <div className="text-3xl mb-4">{feature.icon}</div>
+    <AnimatedCard>
+      <div className="text-3xl mb-4 transform transition-transform group-hover:scale-110 group-hover:rotate-3 duration-300">{feature.icon}</div>
       <h3 className="text-base font-semibold text-white mb-2 group-hover:text-neon-cyan transition-colors">{feature.title}</h3>
       <p className="text-sm text-slate-500 leading-relaxed">{feature.description}</p>
-    </div>
+    </AnimatedCard>
   )
 }
 
@@ -376,14 +406,68 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="px-6 py-16 border-t border-white/5">
-        <div className="max-w-5xl mx-auto">
+      <section className="px-6 py-16 border-t border-white/5 relative">
+        <div className="absolute top-0 right-0 w-1/3 h-1/2 bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="max-w-5xl mx-auto relative z-10">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-3">Why Corpo VPN?</h2>
             <p className="text-slate-500">Industry-leading secure access for the modern distributed workforce.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {appFeatures.map(f => <FeatureCard key={f.title} feature={f} />)}
+          </div>
+        </div>
+      </section>
+
+      {/* Dev Process Section */}
+      <section className="px-6 py-16 border-t border-white/5 relative">
+        <div className="absolute top-1/2 left-0 w-1/4 h-1/2 bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="max-w-5xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-3">Our Development Process</h2>
+            <p className="text-slate-500">A rigorous engineering approach designed for zero-trust security.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { step: '01', title: 'Architecture & Discovery', desc: 'Designing the zero-trust framework, identifying vulnerability vectors, and establishing WireGuard cryptographic foundations.' },
+              { step: '02', title: 'VPN Infrastructure', desc: 'Deploying automated VPS servers equipped with dynamic IP routing, IPTables masquerading, and auto-scaling peer management.' },
+              { step: '03', title: 'Desktop Client Build', desc: 'Developing the high-performance Electron application for native Windows/macOS integration with built-in compliance scanning.' },
+              { step: '04', title: 'Security Audits & Release', desc: 'Running strict penetration tests, verifying Supabase Auth OTP flows, and persisting immutable system audit logs.' }
+            ].map(item => (
+              <AnimatedCard key={item.step} className="flex gap-6 items-start">
+                <div className="text-4xl font-black text-white/5 group-hover:text-cyan-500/20 transition-colors duration-500">{item.step}</div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">{item.title}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
+                </div>
+              </AnimatedCard>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What We Offer Section */}
+      <section className="px-6 py-16 border-t border-white/5 relative overflow-hidden">
+        <div className="max-w-5xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-3">What We Offer</h2>
+            <p className="text-slate-500">Enterprise capabilities built into every connection.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: '⚡', title: 'Automated Provisioning', desc: 'Zero-touch WireGuard deployment.' },
+              { icon: '🛡️', title: 'Device Compliance', desc: 'Real-time OS posture checks.' },
+              { icon: '📊', title: 'Audit Logging', desc: 'Immutable 7-day security logs.' },
+              { icon: '💻', title: 'Multi-Platform', desc: 'Native client apps for all OS.' }
+            ].map((offer, idx) => (
+              <AnimatedCard key={idx} className="text-center">
+                <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center text-xl mb-4 group-hover:bg-cyan-500/20 group-hover:scale-110 transition-all duration-300">
+                  {offer.icon}
+                </div>
+                <h3 className="text-base font-bold text-white mb-2">{offer.title}</h3>
+                <p className="text-xs text-slate-500">{offer.desc}</p>
+              </AnimatedCard>
+            ))}
           </div>
         </div>
       </section>
