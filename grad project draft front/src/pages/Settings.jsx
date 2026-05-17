@@ -125,12 +125,7 @@ export default function Settings() {
   const [protocolOpen, setProtocolOpen] = useState(false);
   const [startup, setStartup] = useState("minimize");
 
-  // Corpo Tunnel config state (now read-only, fetched from backend)
-  const [vpnConfig, setVpnConfig] = useState(null);
-  const [configLoading, setConfigLoading] = useState(true);
-  const [configError, setConfigError] = useState(null);
-  const [reprovisionLoading, setReprovisionLoading] = useState(false);
-  const [reprovisionSuccess, setReprovisionSuccess] = useState(false);
+
 
   // Password change state
   const [newPassword, setNewPassword] = useState("");
@@ -216,69 +211,11 @@ export default function Settings() {
     }
   };
 
-  // Fetch VPN config from backend on mount
-  useEffect(() => {
-    if (currentUser?.email) {
-      setConfigLoading(true);
-      fetch(`${VPN_API}/config?email=${encodeURIComponent(currentUser.email)}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.provisioned) {
-            setVpnConfig(data);
-          }
-          setConfigLoading(false);
-        })
-        .catch((err) => {
-          setConfigError("Failed to load VPN configuration");
-          setConfigLoading(false);
-        });
-    }
-  }, [currentUser?.email]);
 
-  // Re-provision VPN config (admin-only or self)
-  const handleReprovision = async () => {
-    setReprovisionLoading(true);
-    setReprovisionSuccess(false);
-    setConfigError(null);
-    try {
-      const res = await fetch(`${VPN_API}/reprovision`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: currentUser.email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Re-provision failed");
-
-      // Refresh config
-      const configRes = await fetch(
-        `${VPN_API}/config?email=${encodeURIComponent(currentUser.email)}`,
-      );
-      const configData = await configRes.json();
-      if (configData.provisioned) {
-        setVpnConfig(configData);
-      }
-
-      setReprovisionSuccess(true);
-      setTimeout(() => setReprovisionSuccess(false), 4000);
-    } catch (err) {
-      setConfigError(err.message);
-    } finally {
-      setReprovisionLoading(false);
-    }
-  };
 
   const toggle = (key) => setSettings((s) => ({ ...s, [key]: !s[key] }));
 
-  // Mask private key for display
-  const maskKey = (key) => {
-    if (!key) return "—";
-    if (key.length <= 8) return "••••••••";
-    return (
-      key.substring(0, 4) +
-      "••••••••••••••••••••" +
-      key.substring(key.length - 4)
-    );
-  };
+
 
   return (
     <div className="h-full overflow-y-auto px-8 py-8">
@@ -294,150 +231,6 @@ export default function Settings() {
         </div>
 
         <div className="space-y-8">
-          {/* CORPO TUNNEL CONFIG — READ-ONLY (AUTO-PROVISIONED) */}
-          <div className="glass-card p-6 border-cyan-500/20">
-            <SectionHeader
-              title="🔑 Corpo Tunnel Configuration"
-              description="Your VPN peer is automatically provisioned when you register"
-            />
-
-            <div className="space-y-4">
-              {/* Server info (read-only) */}
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">
-                  Server Details
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500">Endpoint:</span>{" "}
-                    <span className="text-cyan-400 font-mono">
-                      80.65.211.27:51820
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Protocol:</span>{" "}
-                    <span className="text-cyan-400 font-mono">
-                      Corpo Tunnel
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">DNS:</span>{" "}
-                    <span className="text-cyan-400 font-mono">1.1.1.1</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Routing:</span>{" "}
-                    <span className="text-cyan-400 font-mono">
-                      0.0.0.0/0 (all traffic)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Auto-provisioned config display */}
-              {configLoading ? (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
-                  <Loader2 size={16} className="text-cyan-400 animate-spin" />
-                  <span className="text-sm text-slate-400">
-                    Loading VPN configuration...
-                  </span>
-                </div>
-              ) : vpnConfig ? (
-                <>
-                  {/* Provisioned status badge */}
-                  <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                    <ShieldCheck size={14} className="text-emerald-400" />
-                    <span className="text-xs text-emerald-300 font-semibold">
-                      VPN Peer Provisioned
-                    </span>
-                    <span className="text-[10px] text-emerald-400/60 ml-auto font-mono">
-                      Auto-assigned on registration
-                    </span>
-                  </div>
-
-                  {/* Client IP (readable) */}
-                  <div>
-                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
-                      <Wifi size={12} className="text-cyan-500" />
-                      Client VPN IP Address
-                    </label>
-                    <div className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono select-all">
-                      {vpnConfig.clientIp}
-                    </div>
-                    <p className="text-[10px] text-slate-600 mt-1">
-                      Automatically assigned by the VPN server. This is your
-                      unique tunnel address.
-                    </p>
-                  </div>
-
-                  {/* Private Key (masked) */}
-                  <div>
-                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1.5">
-                      <Key size={12} className="text-cyan-500" />
-                      Client Private Key
-                    </label>
-                    <div className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-500 text-sm font-mono">
-                      {maskKey(vpnConfig.privateKey)}
-                    </div>
-                    <p className="text-[10px] text-slate-600 mt-1">
-                      Securely stored. This key was generated by the VPN server
-                      during registration.
-                    </p>
-                  </div>
-
-                  {/* Re-provision button (admin-only) */}
-                  {isAdmin && (
-                    <button
-                      onClick={handleReprovision}
-                      disabled={reprovisionLoading}
-                      className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300
-                        ${
-                          reprovisionSuccess
-                            ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-300"
-                            : "bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {reprovisionLoading ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />{" "}
-                          Re-provisioning...
-                        </>
-                      ) : reprovisionSuccess ? (
-                        <>
-                          <CheckCircle size={16} /> New Peer Provisioned!
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw size={16} /> Re-provision VPN Peer (Admin)
-                        </>
-                      )}
-                    </button>
-                  )}
-                </>
-              ) : (
-                /* Not yet provisioned */
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                  <AlertTriangle size={16} className="text-amber-400" />
-                  <div>
-                    <p className="text-sm text-amber-300 font-semibold">
-                      VPN Peer Not Provisioned
-                    </p>
-                    <p className="text-xs text-amber-400/60 mt-0.5">
-                      Your VPN config will be automatically provisioned on your
-                      next login. If the issue persists, contact your admin.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Error */}
-              {configError && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                  <AlertTriangle size={14} className="text-red-400" />
-                  <span className="text-xs text-red-300">{configError}</span>
-                </div>
-              )}
-            </div>
-          </div>
 
           <div className="glass-card p-6 border-purple-500/20">
             <SectionHeader
@@ -472,7 +265,8 @@ export default function Settings() {
                     Check Your Email
                   </h3>
                   <p className="text-sm text-blue-400/70">
-                    A password reset link has been sent to your email. Click the link to set a new password.
+                    A password reset link has been sent to your email. Click the
+                    link to set a new password.
                   </p>
                 </div>
               </div>
@@ -521,7 +315,8 @@ export default function Settings() {
                   >
                     {passLoading ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" /> Updating...
+                        <Loader2 size={16} className="animate-spin" />{" "}
+                        Updating...
                       </>
                     ) : (
                       <>Update Password</>
