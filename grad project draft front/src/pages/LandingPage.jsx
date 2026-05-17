@@ -3,6 +3,32 @@ import { useNavigate } from 'react-router-dom'
 import { Shield, Zap, Globe, Lock, ArrowRight, CheckCircle, Building2, Terminal, Loader2, Download, Monitor } from 'lucide-react'
 import { appFeatures } from '../data/mockData'
 
+function InteractiveAurora() {
+  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
+
+  React.useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <div 
+        className="absolute rounded-full mix-blend-screen filter blur-[100px] opacity-60 transition-transform duration-700 ease-out"
+        style={{
+          background: 'radial-gradient(circle, rgba(0,255,136,0.15) 0%, rgba(6,182,212,0.15) 40%, rgba(59,130,246,0) 70%)',
+          width: '800px',
+          height: '800px',
+          transform: `translate(${mousePosition.x - 400}px, ${mousePosition.y - 400}px)`,
+        }}
+      />
+    </div>
+  );
+}
+
 function InstallerModal({ os, onComplete }) {
   const [step, setStep] = useState(0)
   const [progress, setProgress] = useState(0)
@@ -195,17 +221,16 @@ export default function LandingPage() {
 
   const handleDownload = (os) => {
     if (os === 'Windows') {
+      // Direct download link from GitHub releases
+      window.location.href = "https://github.com/yahiasaad392/corpo-vpn/releases/latest/download/Corpo%20VPN%20Setup%201.0.0.exe";
+      
       setDownloading(os)
       setInstallSuccess(false)
       
-      // Since this is a local development environment, we guide the user to the real build output.
-      // In a real production scenario, this would be a direct link to the hosted .exe.
-      console.log("Real Installer Request: Please run 'npm run electron:build' to generate the setup file in dist-electron/")
-      
       setTimeout(() => {
         setDownloading(null)
-        setInstalling(os)
-      }, 1500)
+        setInstallSuccess(true)
+      }, 2000)
     } else {
       alert(`${os} build is not configured in this prototype. Focus on Windows NSIS.`)
     }
@@ -217,7 +242,9 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen gradient-mesh overflow-y-auto">
+    <div className="min-h-screen gradient-mesh overflow-y-auto relative">
+      <InteractiveAurora />
+      
       {/* Installation Simulation Overlay */}
       {installing && (
         <InstallerModal os={installing} onComplete={completeInstallation} />
