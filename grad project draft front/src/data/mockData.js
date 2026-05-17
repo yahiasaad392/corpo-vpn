@@ -64,8 +64,10 @@ export const liveLogs = [
 // APP FEATURES (Landing Page)
 // ============================================================
 export const appFeatures = [
-  { title: "Corpo VPN Tunnel", description: "Ultra-fast encrypted tunnel using the next-gen Corpo Tunnel protocol." },
-  { title: "Device Compliance", description: "Ensures your workstation meets corporate security standards." },
-  { title: "Seamless MFA", description: "Integrated authentication with company identity providers." },
-  { title: "Admin Controlled", description: "Policies and access levels managed by corporate IT." },
+  { icon: '⚡', title: "WireGuard-Powered Performance", description: "Built on modern WireGuard architecture for ultra-low latency, fast connection speeds, and enterprise scalability." },
+  { icon: '🛡️', title: "Zero-Trust Security Model", description: "Every session is continuously verified. No implicit trust. No unrestricted network exposure." },
+  { icon: '🔍', title: "Real-Time Device Compliance", description: "Validates OS version, security patches, antivirus status, and device integrity before granting access." },
+  { icon: '🔐', title: "Multi-Factor Authentication", description: "Supports secure OTP authentication flows to reduce account compromise risk and strengthen identity protection." },
+  { icon: '🌐', title: "Granular Access Control", description: "Users only access what they need. Micro-segmented permissions reduce attack surfaces and lateral movement." },
+  { icon: '📊', title: "Centralized Admin Dashboard", description: "Manage users, monitor active sessions, revoke compromised devices, and enforce policies from one dashboard." },
 ];

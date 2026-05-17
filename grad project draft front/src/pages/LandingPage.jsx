@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { Shield, Zap, Globe, Lock, ArrowRight, CheckCircle, Building2, Terminal, Loader2, Download, Monitor } from 'lucide-react'
 import { appFeatures } from '../data/mockData'
 
+import SplitText from '../components/reactbits/SplitText'
+import GradientText from '../components/reactbits/GradientText'
+import CountUp from '../components/reactbits/CountUp'
+import Magnet from '../components/reactbits/Magnet'
+import ScrollReveal from '../components/reactbits/ScrollReveal'
+import RotatingText from '../components/reactbits/RotatingText'
+
 function InteractiveAurora() {
   const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
 
@@ -235,11 +242,13 @@ function AnimatedCard({ children, className = "" }) {
 
 function FeatureCard({ feature }) {
   return (
-    <AnimatedCard>
-      <div className="text-3xl mb-4 transform transition-transform group-hover:scale-110 group-hover:rotate-3 duration-300">{feature.icon}</div>
-      <h3 className="text-base font-semibold text-white mb-2 group-hover:text-neon-cyan transition-colors">{feature.title}</h3>
-      <p className="text-sm text-slate-500 leading-relaxed">{feature.description}</p>
-    </AnimatedCard>
+    <Magnet strength={0.1}>
+      <AnimatedCard className="h-full">
+        <div className="text-3xl mb-4 transform transition-transform group-hover:scale-110 group-hover:rotate-3 duration-300">{feature.icon}</div>
+        <h3 className="text-base font-semibold text-white mb-2 group-hover:text-neon-cyan transition-colors">{feature.title}</h3>
+        <p className="text-sm text-slate-500 leading-relaxed">{feature.description}</p>
+      </AnimatedCard>
+    </Magnet>
   )
 }
 
@@ -314,16 +323,18 @@ export default function LandingPage() {
           Enterprise Grade Security · Zero-Trust Ready
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 animate-slide-up">
-          <span className="text-white">Secure HQ.</span>{' '}
-          <span className="neon-text-cyan">Compliant.</span>{' '}
-          <span className="text-white">Private.</span>
+        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 flex flex-wrap justify-center items-center gap-x-4 gap-y-2">
+          <SplitText text="Enterprise VPN" className="text-white" delay={40} />
+          <GradientText colors={['#00f5ff', '#00ff88', '#bf00ff']} className="font-black">
+            <RotatingText words={['Reimagined.', 'Zero Trust.', 'Intelligent.', 'Secured.']} interval={3000} />
+          </GradientText>
         </h1>
 
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in">
-          Corpo VPN provides encrypted access to company headquarters and internal resources. 
-          Deploy the standalone desktop application to begin secure operations.
-        </p>
+        <ScrollReveal delay={200}>
+          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Corpo VPN is a Zero-Trust remote access platform that replaces outdated VPN infrastructure with intelligent, identity-aware secure networking. Powered by WireGuard and real-time device posture validation.
+          </p>
+        </ScrollReveal>
 
         {/* Trust bullets */}
         <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-sm">
@@ -336,9 +347,9 @@ export default function LandingPage() {
         </div>
 
         {/* App Mockup */}
-        <div className="mb-16 animate-float">
+        <ScrollReveal delay={400} className="mb-16 animate-float">
           <DashboardMockup />
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* Download Section */}
@@ -353,26 +364,27 @@ export default function LandingPage() {
               { os: 'macOS',   icon: '🍎', sub: 'macOS 12+ Universal', color: 'from-slate-600 to-slate-700' },
               { os: 'Linux',   icon: '🐧', sub: '.deb / .rpm / AppImage', color: 'from-orange-600 to-orange-700' },
             ].map(({ os, icon, sub, color }) => (
-              <button
-                key={os}
-                onClick={() => handleDownload(os)}
-                disabled={downloading !== null}
-                className={`flex items-center gap-4 px-6 py-4 rounded-2xl bg-gradient-to-br ${color}
-                  ${downloading === os ? 'opacity-100 scale-95 ring-4 ring-white/20' : downloading ? 'opacity-40 grayscale' : 'hover:opacity-90 hover:scale-105'} 
-                  transition-all duration-300 group shadow-lg min-w-52 relative overflow-hidden`}
-              >
-                {downloading === os && (
-                  <div className="absolute inset-0 bg-white/10 animate-pulse flex items-center justify-center">
-                    <Zap size={24} className="text-white animate-bounce" />
+              <Magnet key={os} strength={0.15}>
+                <button
+                  onClick={() => handleDownload(os)}
+                  disabled={downloading !== null}
+                  className={`flex items-center gap-4 px-6 py-4 rounded-2xl bg-gradient-to-br ${color}
+                    ${downloading === os ? 'opacity-100 scale-95 ring-4 ring-white/20' : downloading ? 'opacity-40 grayscale' : 'hover:opacity-90 hover:scale-105'} 
+                    transition-all duration-300 group shadow-lg min-w-52 relative overflow-hidden`}
+                >
+                  {downloading === os && (
+                    <div className="absolute inset-0 bg-white/10 animate-pulse flex items-center justify-center">
+                      <Zap size={24} className="text-white animate-bounce" />
+                    </div>
+                  )}
+                  <span className="text-3xl">{icon}</span>
+                  <div className="text-left">
+                    <div className="text-white font-semibold">Download for {os}</div>
+                    <div className="text-white/60 text-xs mt-0.5">{sub}</div>
                   </div>
-                )}
-                <span className="text-3xl">{icon}</span>
-                <div className="text-left">
-                  <div className="text-white font-semibold">Download for {os}</div>
-                  <div className="text-white/60 text-xs mt-0.5">{sub}</div>
-                </div>
-                <ArrowRight size={16} className={`ml-auto text-white/60 group-hover:translate-x-1 transition-transform ${downloading === os ? 'opacity-0' : ''}`} />
-              </button>
+                  <ArrowRight size={16} className={`ml-auto text-white/60 group-hover:translate-x-1 transition-transform ${downloading === os ? 'opacity-0' : ''}`} />
+                </button>
+              </Magnet>
             ))}
           </div>
 
@@ -434,13 +446,17 @@ export default function LandingPage() {
               { step: '03', title: 'Desktop Client Build', desc: 'Developing the high-performance Electron application for native Windows/macOS integration with built-in compliance scanning.' },
               { step: '04', title: 'Security Audits & Release', desc: 'Running strict penetration tests, verifying Supabase Auth OTP flows, and persisting immutable system audit logs.' }
             ].map(item => (
-              <AnimatedCard key={item.step} className="flex gap-6 items-start">
-                <div className="text-4xl font-black text-white/5 group-hover:text-cyan-500/20 transition-colors duration-500">{item.step}</div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">{item.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
-                </div>
-              </AnimatedCard>
+              <ScrollReveal key={item.step} delay={parseInt(item.step) * 100}>
+                <Magnet strength={0.05}>
+                  <AnimatedCard className="flex gap-6 items-start h-full">
+                    <div className="text-4xl font-black text-white/5 group-hover:text-cyan-500/20 transition-colors duration-500">{item.step}</div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">{item.title}</h3>
+                      <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
+                    </div>
+                  </AnimatedCard>
+                </Magnet>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -460,13 +476,17 @@ export default function LandingPage() {
               { icon: '📊', title: 'Audit Logging', desc: 'Immutable 7-day security logs.' },
               { icon: '💻', title: 'Multi-Platform', desc: 'Native client apps for all OS.' }
             ].map((offer, idx) => (
-              <AnimatedCard key={idx} className="text-center">
-                <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center text-xl mb-4 group-hover:bg-cyan-500/20 group-hover:scale-110 transition-all duration-300">
-                  {offer.icon}
-                </div>
-                <h3 className="text-base font-bold text-white mb-2">{offer.title}</h3>
-                <p className="text-xs text-slate-500">{offer.desc}</p>
-              </AnimatedCard>
+              <ScrollReveal key={idx} delay={idx * 100}>
+                <Magnet strength={0.1}>
+                  <AnimatedCard className="text-center h-full">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center text-xl mb-4 group-hover:bg-cyan-500/20 group-hover:scale-110 transition-all duration-300">
+                      {offer.icon}
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-2">{offer.title}</h3>
+                    <p className="text-xs text-slate-500">{offer.desc}</p>
+                  </AnimatedCard>
+                </Magnet>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -476,13 +496,15 @@ export default function LandingPage() {
       <section className="px-6 py-12 border-t border-white/5 border-b border-white/5">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: '100+',   label: 'Enterprise Clients' },
-            { value: '99.99%', label: 'Gateway Uptime'    },
-            { value: '24/7',   label: 'Security Ops'      },
-            { value: '< 1ms',  label: 'Tunnel Latency'    },
-          ].map(({ value, label }) => (
+            { value: 100, suffix: '+',   label: 'Enterprise Clients' },
+            { value: 99.99, suffix: '%', decimals: 2, label: 'Gateway Uptime'    },
+            { value: 24, suffix: '/7',   label: 'Security Ops'      },
+            { value: 1, prefix: '< ', suffix: 'ms',  label: 'Tunnel Latency'    },
+          ].map(({ value, prefix, suffix, decimals, label }) => (
             <div key={label}>
-              <div className="text-3xl font-black neon-text-cyan">{value}</div>
+              <div className="text-3xl font-black neon-text-cyan">
+                <CountUp from={0} to={value} decimals={decimals || 0} prefix={prefix || ''} suffix={suffix || ''} duration={2000} />
+              </div>
               <div className="text-sm text-slate-500 mt-1">{label}</div>
             </div>
           ))}
