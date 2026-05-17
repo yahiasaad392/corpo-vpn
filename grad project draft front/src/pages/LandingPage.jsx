@@ -9,32 +9,12 @@ import CountUp from '../components/reactbits/CountUp'
 import Magnet from '../components/reactbits/Magnet'
 import ScrollReveal from '../components/reactbits/ScrollReveal'
 import RotatingText from '../components/reactbits/RotatingText'
-
-function InteractiveAurora() {
-  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
-
-  React.useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      <div 
-        className="absolute rounded-full mix-blend-screen filter blur-[100px] opacity-60 transition-transform duration-700 ease-out"
-        style={{
-          background: 'radial-gradient(circle, rgba(0,255,136,0.15) 0%, rgba(6,182,212,0.15) 40%, rgba(59,130,246,0) 70%)',
-          width: '800px',
-          height: '800px',
-          transform: `translate(${mousePosition.x - 400}px, ${mousePosition.y - 400}px)`,
-        }}
-      />
-    </div>
-  );
-}
+import GhostCursor from '../components/reactbits/GhostCursor'
+import BlobCursor from '../components/reactbits/BlobCursor'
+import StarBorder from '../components/reactbits/StarBorder'
+import ShinyText from '../components/reactbits/ShinyText'
+import ScrambledText from '../components/reactbits/ScrambledText'
+import Orb from '../components/reactbits/Orb'
 
 function InstallerModal({ os, onComplete }) {
   const [step, setStep] = useState(0)
@@ -77,7 +57,9 @@ function InstallerModal({ os, onComplete }) {
         <div className="h-8 bg-gradient-to-b from-slate-100 to-slate-200 border-b border-slate-300 flex items-center justify-between px-3 shrink-0">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-blue-600" />
-            <span className="text-[11px] font-medium">Corpo VPN Setup ({os})</span>
+            <span className="text-[11px] font-medium">
+              <ScrambledText text={`Corpo VPN Setup (${os})`} speed={40} scrambleOnHover={false} />
+            </span>
           </div>
           <div className="flex gap-1.5 opacity-50">
             <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
@@ -112,7 +94,9 @@ function InstallerModal({ os, onComplete }) {
             
             <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono italic">
               <Terminal size={10} />
-              <span>C:\Windows\System32\drivers\nexus_tunnel_v4.sys ... OK</span>
+              <span>
+                <ScrambledText text="C:\Windows\System32\drivers\nexus_tunnel_v4.sys ... OK" speed={20} />
+              </span>
             </div>
           </div>
         </div>
@@ -130,7 +114,7 @@ function InstallerModal({ os, onComplete }) {
 
 function DashboardMockup() {
   return (
-    <div className="relative w-full max-w-lg mx-auto select-none pointer-events-none">
+    <div className="relative w-full max-w-lg mx-auto select-none pointer-events-none group">
       {/* Window chrome */}
       <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10"
         style={{ boxShadow: '0 40px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05)' }}>
@@ -140,13 +124,30 @@ function DashboardMockup() {
           <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
           <div className="flex-1 flex justify-center">
-              <div className="text-xs text-slate-500 font-mono">Corpo VPN — HQ Dashboard</div>
+              <div className="text-xs text-slate-500 font-mono">
+                <ScrambledText text="Corpo VPN — HQ Dashboard" speed={30} />
+              </div>
           </div>
         </div>
         {/* App body */}
-        <div className="flex bg-dark-900/95">
+        <div className="flex bg-dark-900/95 relative overflow-hidden">
+          {/* Subtle cursor effect inside the mockup area using BlobCursor */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0">
+             <BlobCursor 
+                blobType="circle"
+                fillColor="rgba(0, 245, 255, 0.15)"
+                trailCount={2}
+                sizes={[80, 120]}
+                innerSizes={[10, 20]}
+                innerColor="transparent"
+                opacities={[1, 0.5]}
+                shadowBlur={10}
+                filterStdDeviation={20}
+             />
+          </div>
+
           {/* Sidebar */}
-          <div className="w-16 bg-dark-800/80 border-r border-white/5 flex flex-col items-center gap-4 py-5">
+          <div className="w-16 bg-dark-800/80 border-r border-white/5 flex flex-col items-center gap-4 py-5 z-10 relative">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
               <Shield size={14} className="text-white" />
             </div>
@@ -158,7 +159,7 @@ function DashboardMockup() {
             ))}
           </div>
           {/* Main */}
-          <div className="flex-1 p-5">
+          <div className="flex-1 p-5 z-10 relative">
             {/* Connect ring mock */}
             <div className="flex flex-col items-center mb-4">
               <div className="relative w-28 h-28 flex items-center justify-center">
@@ -167,7 +168,9 @@ function DashboardMockup() {
                 <div className="absolute inset-1 rounded-full bg-dark-900" />
                 <div className="relative z-10 flex flex-col items-center">
                   <Shield size={20} className="text-neon-green mb-0.5" fill="rgba(0,255,136,0.15)" />
-                  <span className="text-xs font-bold text-neon-green">Connected</span>
+                  <span className="text-xs font-bold text-neon-green">
+                    <ShinyText baseColor="#00ff88" shineColor="#ffffff" speed="3s">Connected</ShinyText>
+                  </span>
                 </div>
               </div>
               <div className="text-xs text-neon-green font-semibold mt-1" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
@@ -193,7 +196,9 @@ function DashboardMockup() {
               <span className="text-lg">🏢</span>
               <div>
                 <div className="text-[11px] font-semibold text-white">Main HQ · New York</div>
-                <div className="text-[10px] text-slate-500 font-mono">hq-gw.nexuscorp.internal</div>
+                <div className="text-[10px] text-slate-500 font-mono">
+                   <ScrambledText text="hq-gw.nexuscorp.internal" speed={60} />
+                </div>
               </div>
               <div className="ml-auto flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
@@ -230,7 +235,7 @@ function AnimatedCard({ children, className = "" }) {
       className={`relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-6 transition-all duration-500 group hover:-translate-y-1 hover:border-cyan-500/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] ${className}`}
     >
       <div
-        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-hover:opacity-100 z-0"
         style={{
           background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(6,182,212,0.15), transparent 40%)`,
         }}
@@ -281,8 +286,16 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen gradient-mesh overflow-y-auto relative">
-      <InteractiveAurora />
+    <div className="min-h-screen gradient-mesh overflow-y-auto overflow-x-hidden relative">
+      
+      {/* Global Interactive Cursor Effect */}
+      <GhostCursor 
+        color="#00f5ff" 
+        brightness={1.5} 
+        bloomStrength={0.15} 
+        trailLength={60} 
+        zIndex={1}
+      />
       
       {/* Installation Simulation Overlay */}
       {installing && (
@@ -309,105 +322,117 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative px-6 pt-24 pb-20 text-center overflow-hidden">
+      <section className="relative px-6 pt-24 pb-20 text-center overflow-hidden z-10">
+        
+        {/* Stunning Orb Background Effect */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] -z-10 opacity-60">
+          <Orb hue={195} hoverIntensity={0.5} rotateOnHover={true} forceHoverState={false} backgroundColor="transparent" />
+        </div>
+
         {/* Background glows */}
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-none -z-20">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-cyan-500/8 blur-3xl" />
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-purple-500/6 blur-3xl" />
-          <div className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full bg-blue-500/6 blur-3xl" />
         </div>
 
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300 mb-8 animate-fade-in">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs mb-8 animate-fade-in relative z-10">
           <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
-          Enterprise Grade Security · Zero-Trust Ready
+          <ShinyText baseColor="#94a3b8" shineColor="#00f5ff" speed="4s">
+            Enterprise Grade Security · Zero-Trust Ready
+          </ShinyText>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 flex flex-wrap justify-center items-center gap-x-4 gap-y-2">
+        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 flex flex-wrap justify-center items-center gap-x-4 gap-y-2 relative z-10">
           <SplitText text="Enterprise VPN" className="text-white" delay={40} />
           <GradientText colors={['#00f5ff', '#00ff88', '#bf00ff']} className="font-black">
             <RotatingText words={['Reimagined.', 'Zero Trust.', 'Intelligent.', 'Secured.']} interval={3000} />
           </GradientText>
         </h1>
 
-        <ScrollReveal delay={200}>
+        <ScrollReveal delay={200} className="relative z-10">
           <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
             Corpo VPN is a Zero-Trust remote access platform that replaces outdated VPN infrastructure with intelligent, identity-aware secure networking. Powered by WireGuard and real-time device posture validation.
           </p>
         </ScrollReveal>
 
         {/* Trust bullets */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-sm relative z-10">
           {['Compliance Verified', 'AES-256-GCM', 'HQ Gateway Tunnel', 'SAML/MFA Support'].map(item => (
-            <div key={item} className="flex items-center gap-1.5 text-slate-400">
-              <CheckCircle size={14} className="text-neon-green" />
-              {item}
+            <div key={item} className="flex items-center gap-1.5 text-slate-400 group">
+              <CheckCircle size={14} className="text-neon-green group-hover:scale-125 transition-transform" />
+              <ScrambledText text={item} speed={40} scrambleOnHover={true} scrambleOnMount={false} />
             </div>
           ))}
         </div>
 
         {/* App Mockup */}
-        <ScrollReveal delay={400} className="mb-16 animate-float">
+        <ScrollReveal delay={400} className="mb-16 animate-float relative z-10">
           <DashboardMockup />
         </ScrollReveal>
       </section>
 
       {/* Download Section */}
-      <section className="px-6 py-16 border-t border-white/5">
+      <section className="px-6 py-16 border-t border-white/5 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-3">Get Corpo VPN</h2>
           <p className="text-slate-500 mb-10">Deploy to your workstation for secure remote work access.</p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-8 relative z-20">
             {[
               { os: 'Windows', icon: '🪟', sub: 'Windows 10/11 64-bit', color: 'from-blue-600 to-blue-700' },
               { os: 'macOS',   icon: '🍎', sub: 'macOS 12+ Universal', color: 'from-slate-600 to-slate-700' },
               { os: 'Linux',   icon: '🐧', sub: '.deb / .rpm / AppImage', color: 'from-orange-600 to-orange-700' },
             ].map(({ os, icon, sub, color }) => (
               <Magnet key={os} strength={0.15}>
-                <button
-                  onClick={() => handleDownload(os)}
-                  disabled={downloading !== null}
-                  className={`flex items-center gap-4 px-6 py-4 rounded-2xl bg-gradient-to-br ${color}
-                    ${downloading === os ? 'opacity-100 scale-95 ring-4 ring-white/20' : downloading ? 'opacity-40 grayscale' : 'hover:opacity-90 hover:scale-105'} 
-                    transition-all duration-300 group shadow-lg min-w-52 relative overflow-hidden`}
-                >
-                  {downloading === os && (
-                    <div className="absolute inset-0 bg-white/10 animate-pulse flex items-center justify-center">
-                      <Zap size={24} className="text-white animate-bounce" />
+                <StarBorder as="div" color="#00f5ff" speed="4s" thickness={2}>
+                  <button
+                    onClick={() => handleDownload(os)}
+                    disabled={downloading !== null}
+                    className={`flex items-center gap-4 w-full h-full text-left
+                      ${downloading === os ? 'opacity-100 scale-95' : downloading ? 'opacity-40 grayscale' : 'hover:opacity-90'} 
+                      transition-all duration-300 group min-w-56`}
+                  >
+                    {downloading === os && (
+                      <div className="absolute inset-0 bg-white/10 animate-pulse flex items-center justify-center rounded-2xl z-20">
+                        <Zap size={24} className="text-white animate-bounce" />
+                      </div>
+                    )}
+                    <span className="text-3xl">{icon}</span>
+                    <div className="flex-1">
+                      <div className="text-white font-semibold">Download for {os}</div>
+                      <div className="text-white/60 text-xs mt-0.5">
+                        {downloading === os ? <ScrambledText text="Fetching..." speed={20} scrambleOnHover={false} /> : sub}
+                      </div>
                     </div>
-                  )}
-                  <span className="text-3xl">{icon}</span>
-                  <div className="text-left">
-                    <div className="text-white font-semibold">Download for {os}</div>
-                    <div className="text-white/60 text-xs mt-0.5">{sub}</div>
-                  </div>
-                  <ArrowRight size={16} className={`ml-auto text-white/60 group-hover:translate-x-1 transition-transform ${downloading === os ? 'opacity-0' : ''}`} />
-                </button>
+                    <ArrowRight size={16} className={`ml-2 text-white/60 group-hover:translate-x-1 transition-transform ${downloading === os ? 'opacity-0' : ''}`} />
+                  </button>
+                </StarBorder>
               </Magnet>
             ))}
           </div>
 
           {/* Install Success Message */}
           {installSuccess && (
-            <div className="mt-8 p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-fade-in">
-              <div className="flex items-center justify-center gap-3 text-emerald-400 font-bold text-lg mb-2">
+            <div className="mt-8 p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-fade-in inline-block text-left relative z-20">
+              <div className="flex items-center gap-3 text-emerald-400 font-bold text-lg mb-2">
                 <CheckCircle size={24} />
-                Installation Successful!
+                <ShinyText baseColor="#34d399" shineColor="#ffffff">Installation Successful!</ShinyText>
               </div>
               <p className="text-slate-400 text-sm mb-6">
                 Corpo VPN setup has been verified. <br />
-                <strong>Production Installer Path:</strong> <code className="text-cyan-400">/dist-electron/Corpo VPN Setup 1.0.0.exe</code>
+                <strong>Production Installer Path:</strong> <code className="text-cyan-400 font-mono">/dist-electron/Corpo VPN Setup 1.0.0.exe</code>
               </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => navigate('/app/dashboard')}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600
-                    text-white font-bold hover:shadow-glow-cyan transition-all duration-300 hover:scale-105"
-                >
-                  <Monitor size={18} />
-                  Launch Development Preview
-                </button>
+              <div className="flex flex-col gap-3 items-center">
+                <Magnet strength={0.2}>
+                  <button
+                    onClick={() => navigate('/app/dashboard')}
+                    className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600
+                      text-white font-bold hover:shadow-glow-cyan transition-all duration-300 hover:scale-105"
+                  >
+                    <Monitor size={18} />
+                    Launch Development Preview
+                  </button>
+                </Magnet>
                 <p className="text-[10px] text-slate-500 italic">
                   Note: To generate the actual .exe file, please run <strong>npm run electron:build</strong> in your terminal.
                 </p>
@@ -418,11 +443,13 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="px-6 py-16 border-t border-white/5 relative">
+      <section className="px-6 py-16 border-t border-white/5 relative z-10">
         <div className="absolute top-0 right-0 w-1/3 h-1/2 bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3">Why Corpo VPN?</h2>
+            <h2 className="text-3xl font-bold text-white mb-3">
+              <SplitText text="Why Corpo VPN?" delay={30} />
+            </h2>
             <p className="text-slate-500">Industry-leading secure access for the modern distributed workforce.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -432,7 +459,7 @@ export default function LandingPage() {
       </section>
 
       {/* Dev Process Section */}
-      <section className="px-6 py-16 border-t border-white/5 relative">
+      <section className="px-6 py-16 border-t border-white/5 relative z-10">
         <div className="absolute top-1/2 left-0 w-1/4 h-1/2 bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="text-center mb-12">
@@ -448,8 +475,10 @@ export default function LandingPage() {
             ].map(item => (
               <ScrollReveal key={item.step} delay={parseInt(item.step) * 100}>
                 <Magnet strength={0.05}>
-                  <AnimatedCard className="flex gap-6 items-start h-full">
-                    <div className="text-4xl font-black text-white/5 group-hover:text-cyan-500/20 transition-colors duration-500">{item.step}</div>
+                  <AnimatedCard className="flex gap-6 items-start h-full group">
+                    <div className="text-4xl font-black text-white/5 group-hover:text-cyan-500/20 transition-colors duration-500">
+                       <ScrambledText text={item.step} speed={50} scrambleChars="01" />
+                    </div>
                     <div>
                       <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">{item.title}</h3>
                       <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
@@ -463,7 +492,7 @@ export default function LandingPage() {
       </section>
 
       {/* What We Offer Section */}
-      <section className="px-6 py-16 border-t border-white/5 relative overflow-hidden">
+      <section className="px-6 py-16 border-t border-white/5 relative overflow-hidden z-10">
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-3">What We Offer</h2>
@@ -478,7 +507,7 @@ export default function LandingPage() {
             ].map((offer, idx) => (
               <ScrollReveal key={idx} delay={idx * 100}>
                 <Magnet strength={0.1}>
-                  <AnimatedCard className="text-center h-full">
+                  <AnimatedCard className="text-center h-full group">
                     <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center text-xl mb-4 group-hover:bg-cyan-500/20 group-hover:scale-110 transition-all duration-300">
                       {offer.icon}
                     </div>
@@ -493,7 +522,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Banner */}
-      <section className="px-6 py-12 border-t border-white/5 border-b border-white/5">
+      <section className="px-6 py-12 border-t border-white/5 border-b border-white/5 z-10 relative">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
             { value: 100, suffix: '+',   label: 'Enterprise Clients' },
@@ -502,21 +531,26 @@ export default function LandingPage() {
             { value: 1, prefix: '< ', suffix: 'ms',  label: 'Tunnel Latency'    },
           ].map(({ value, prefix, suffix, decimals, label }) => (
             <div key={label}>
-              <div className="text-3xl font-black neon-text-cyan">
-                <CountUp from={0} to={value} decimals={decimals || 0} prefix={prefix || ''} suffix={suffix || ''} duration={2000} />
+              <div className="text-3xl font-black neon-text-cyan flex justify-center items-center">
+                {prefix && <span>{prefix}</span>}
+                <CountUp from={0} to={value} decimals={decimals || 0} duration={2000} />
+                {suffix && <span>{suffix}</span>}
               </div>
-              <div className="text-sm text-slate-500 mt-1">{label}</div>
+              <div className="text-sm text-slate-500 mt-1">
+                <ScrambledText text={label} speed={30} scrambleOnHover={true} />
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-
       {/* Footer */}
-      <footer className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 z-10 relative bg-dark-900/50 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <Shield size={14} className="text-cyan-500" />
-          <span className="text-sm text-slate-600">© 2026 Corpo VPN. Internal Use Only.</span>
+          <span className="text-sm text-slate-600">
+             <ShinyText baseColor="#475569" shineColor="#94a3b8" speed="5s">© 2026 Corpo VPN. Internal Use Only.</ShinyText>
+          </span>
         </div>
         <div className="flex gap-6 text-xs text-slate-700">
           {['Privacy Policy', 'Terms of Service', 'Contact', 'Status'].map(l => (
