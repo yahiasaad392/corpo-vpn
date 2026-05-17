@@ -18,7 +18,7 @@ import {
 import { AUTH_API as API, VPN_API } from "../lib/api";
 import { supabase } from "../lib/supabase";
 
-const PROTOCOLS = ["Corpo Tunnel", "OpenVPN (UDP)", "OpenVPN (TCP)", "IKEv2"];
+
 
 function SectionHeader({ title, description }) {
   return (
@@ -121,21 +121,18 @@ export default function Settings() {
     analytics: false,
   });
 
-  const [protocol, setProtocol] = useState("Corpo Tunnel");
-  const [protocolOpen, setProtocolOpen] = useState(false);
-  const [startup, setStartup] = useState("minimize");
+
 
 
 
   // Password change state
+  const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passLoading, setPassLoading] = useState(false);
   const [passError, setPassError] = useState("");
   const [passwordUpdated, setPasswordUpdated] = useState(false);
-  const [resetEmailSent, setResetEmailSent] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetError, setResetError] = useState("");
+
 
   const validatePassword = (pass, userEmail) => {
     const exemptEmails = ["ys5313944@gmail.com", "yahiasaad1904@gmail.com"];
@@ -153,6 +150,11 @@ export default function Settings() {
       return;
     }
 
+    if (!oldPassword) {
+      setPassError("Please enter your current password.");
+      return;
+    }
+
     if (!validatePassword(newPassword, user.email)) {
       setPassError(
         "New password must be 8+ chars, have upper/lower/special characters",
@@ -167,14 +169,35 @@ export default function Settings() {
 
     setPassLoading(true);
     try {
-      // Update password via Supabase Auth (requires active session)
+      // 1. Verify old password matches the one in DB
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: oldPassword,
+      });
+
+      if (signInError) {
+        throw new Error("Incorrect current password. Please try again.");
+      }
+
+      // 2. Update password via Supabase Auth
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
       if (error) throw new Error(error.message);
 
+      try {
+        await fetch(`${API}/log-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, action: 'Password Update', details: 'User successfully updated their password via settings' }),
+        });
+      } catch (logErr) {
+        console.warn('Failed to log event', logErr);
+      }
+
       // Success — show thank-you state
       setPasswordUpdated(true);
+      setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => setPasswordUpdated(false), 5000);
@@ -185,31 +208,7 @@ export default function Settings() {
     }
   };
 
-  const handleSendResetEmail = async () => {
-    setResetError("");
 
-    const userStr = localStorage.getItem("vpn_user");
-    const user = userStr ? JSON.parse(userStr) : null;
-    if (!user?.email) {
-      setResetError("User not found. Please log in again.");
-      return;
-    }
-
-    setResetLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `https://corpo-vpn.vercel.app/reset-password.html`,
-      });
-      if (error) throw new Error(error.message);
-
-      setResetEmailSent(true);
-      setTimeout(() => setResetEmailSent(false), 6000);
-    } catch (err) {
-      setResetError(err.message || "Failed to send reset email");
-    } finally {
-      setResetLoading(false);
-    }
-  };
 
 
 
@@ -254,22 +253,6 @@ export default function Settings() {
                   </p>
                 </div>
               </div>
-            ) : resetEmailSent ? (
-              /* ── Reset Email Sent State ── */
-              <div className="space-y-4 animate-fade-in">
-                <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/15 flex items-center justify-center">
-                    <CheckCircle size={32} className="text-blue-400" />
-                  </div>
-                  <h3 className="text-lg font-bold text-blue-300 mb-1">
-                    Check Your Email
-                  </h3>
-                  <p className="text-sm text-blue-400/70">
-                    A password reset link has been sent to your email. Click the
-                    link to set a new password.
-                  </p>
-                </div>
-              </div>
             ) : (
               /* ── Password Form ── */
               <div className="space-y-6">
@@ -278,6 +261,19 @@ export default function Settings() {
                   <label className="text-xs text-slate-400 font-medium block">
                     Update Password Directly
                   </label>
+                  <div>
+                    <label className="text-xs text-slate-400 font-medium mb-1.5 block">
+                      Current Password
+                    </label>
+                    <input
+                      type="password"
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/40"
+                    />
+                  </div>
+
                   <div>
                     <label className="text-xs text-slate-400 font-medium mb-1.5 block">
                       New Password
@@ -310,7 +306,7 @@ export default function Settings() {
 
                   <button
                     onClick={handleChangePassword}
-                    disabled={passLoading || !newPassword || !confirmPassword}
+                    disabled={passLoading || !oldPassword || !newPassword || !confirmPassword}
                     className="w-full py-3 rounded-xl font-semibold text-sm bg-purple-600 hover:bg-purple-500 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {passLoading ? (

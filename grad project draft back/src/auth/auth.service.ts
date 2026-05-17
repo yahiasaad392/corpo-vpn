@@ -336,41 +336,4 @@ export class AuthService {
     return result.rows[0];
   }
 
-  async updatePasswordViaRecovery(email: string, password: string) {
-    if (!email || !password) {
-      throw new BadRequestException("Email and password are required");
-    }
-
-    try {
-      // Verify user exists in database
-      const userResult = await this.db.pool.query(
-        "SELECT id, email FROM auth_users WHERE email=$1",
-        [email],
-      );
-
-      if (userResult.rows.length === 0) {
-        throw new BadRequestException("User not found");
-      }
-
-      // Password update in Supabase auth is already done by the frontend
-      // This endpoint just logs the password update in the database for audit trail
-      await this.db.pool.query(
-        "UPDATE auth_users SET updated_at=NOW() WHERE email=$1",
-        [email],
-      );
-
-      console.log(`✅ Password updated for user: ${email}`);
-      return {
-        success: true,
-        message:
-          "Password updated successfully. Please sign in with your new password.",
-      };
-    } catch (error) {
-      console.error("Password update failed:", error);
-      throw new HttpException(
-        error.message || "Failed to update password",
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
 }

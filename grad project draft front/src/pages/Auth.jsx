@@ -211,6 +211,16 @@ export default function Auth() {
       })
       if (updateError) throw new Error(updateError.message)
       
+      try {
+        await fetch(`${AUTH_API}/log-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, action: 'Password Reset', details: 'User successfully reset their password via OTP' }),
+        });
+      } catch (logErr) {
+        console.warn('Failed to log event', logErr);
+      }
+
       await supabase.auth.signOut() // Sign out to force re-login with new password
       setSuccess('Password updated! Please log in with your new password.')
       setStep('login')

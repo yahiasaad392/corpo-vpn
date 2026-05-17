@@ -49,12 +49,10 @@ export class AuthController {
     return this.authService.getAuditLogs(callerEmail);
   }
 
-  // ── Password Recovery ────────────────────────────────────
-  @Post("update-password")
-  async updatePassword(@Body() body: any) {
-    return this.authService.updatePasswordViaRecovery(
-      body.email,
-      body.password,
-    );
+  @Post("log-event")
+  async logEvent(@Body() body: { email: string; action: string; details?: string }) {
+    console.log(`[Security] User ${body.email || 'Unknown'} performed action: ${body.action} ${body.details ? `- ${body.details}` : ''}`);
+    return { success: true };
   }
+
 }
