@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Zap, Globe, Lock, ArrowRight, CheckCircle, Building2, Terminal, Loader2, Download, Monitor } from 'lucide-react'
+import { Shield, Zap, Globe, Lock, ArrowRight, CheckCircle, Building2, Terminal, Loader2, Download, Monitor, Github } from 'lucide-react'
 import { appFeatures } from '../data/mockData'
 
 import SplitText from '../components/reactbits/SplitText'
@@ -9,208 +9,76 @@ import CountUp from '../components/reactbits/CountUp'
 import Magnet from '../components/reactbits/Magnet'
 import ScrollReveal from '../components/reactbits/ScrollReveal'
 import RotatingText from '../components/reactbits/RotatingText'
-import GhostCursor from '../components/reactbits/GhostCursor'
-import BlobCursor from '../components/reactbits/BlobCursor'
 import StarBorder from '../components/reactbits/StarBorder'
 import ShinyText from '../components/reactbits/ShinyText'
 import ScrambledText from '../components/reactbits/ScrambledText'
 import Orb from '../components/reactbits/Orb'
 
-function InstallerModal({ os, onComplete }) {
-  const [step, setStep] = useState(0)
-  const [progress, setProgress] = useState(0)
-
-  const steps = [
-    { label: 'Initializing...', icon: Monitor },
-    { label: 'Downloading binaries...', icon: Download },
-    { label: 'Unpacking assets...', icon: Shield },
-    { label: 'Registering security services...', icon: Lock },
-    { label: 'Optimizing tunnel pipeline...', icon: Zap },
-    { label: 'Finalizing setup...', icon: CheckCircle },
-  ]
-
-  React.useEffect(() => {
-    let interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) {
-          if (step < steps.length - 1) {
-            setStep(s => s + 1)
-            return 0
-          } else {
-            clearInterval(interval)
-            setTimeout(onComplete, 500)
-            return 100
-          }
-        }
-        return p + Math.random() * 15
-      })
-    }, 150)
-    return () => clearInterval(interval)
-  }, [step, steps.length, onComplete])
-
-  const ActiveIcon = steps[step].icon
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-[480px] bg-[#f0f0f0] rounded-lg shadow-2xl border border-white/20 overflow-hidden flex flex-col text-slate-800 animate-zoom-in">
-        {/* Titlebar */}
-        <div className="h-8 bg-gradient-to-b from-slate-100 to-slate-200 border-b border-slate-300 flex items-center justify-between px-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <Shield size={14} className="text-blue-600" />
-            <span className="text-[11px] font-medium">
-              <ScrambledText text={`Corpo VPN Setup (${os})`} speed={40} scrambleOnHover={false} />
-            </span>
-          </div>
-          <div className="flex gap-1.5 opacity-50">
-            <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-8 flex gap-6 bg-white">
-          <div className="w-24 h-24 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
-            <ActiveIcon size={48} className="text-blue-600 animate-pulse" />
-          </div>
-          <div className="flex-1 space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 leading-tight">Installing Gateway Access</h3>
-              <p className="text-sm text-slate-500 mt-1">Please wait while the setup wizard installs Corpo VPN on your system.</p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <span>{steps[step].label}</span>
-                <span>{Math.round(progress)}%</span>
-              </div>
-              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                <div 
-                  className="h-full bg-blue-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(37,99,235,0.4)]"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono italic">
-              <Terminal size={10} />
-              <span>
-                <ScrambledText text="C:\Windows\System32\drivers\nexus_tunnel_v4.sys ... OK" speed={20} />
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="bg-slate-50 border-t border-slate-200 p-4 flex justify-end gap-3">
-          <button disabled className="px-6 py-1.5 rounded bg-white border border-slate-300 text-xs font-medium text-slate-400">Back</button>
-          <button disabled className="px-6 py-1.5 rounded bg-blue-600 border border-blue-700 text-xs font-medium text-white shadow-sm opacity-50">Next</button>
-          <button className="px-6 py-1.5 rounded bg-white border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function DashboardMockup() {
   return (
-    <div className="relative w-full max-w-lg mx-auto select-none pointer-events-none group">
+    <div className="relative w-full max-w-lg mx-auto select-none pointer-events-none group mt-10">
       {/* Window chrome */}
       <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10"
-        style={{ boxShadow: '0 40px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05)' }}>
+        style={{ boxShadow: '0 40px 120px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)' }}>
         {/* Title bar */}
-        <div className="flex items-center gap-2 px-4 py-3 bg-dark-800/90 border-b border-white/8">
-          <div className="w-3 h-3 rounded-full bg-red-500/80" />
-          <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-          <div className="w-3 h-3 rounded-full bg-green-500/80" />
+        <div className="flex items-center gap-2 px-4 py-3 bg-slate-900 border-b border-white/5">
+          <div className="w-3 h-3 rounded-full bg-slate-700" />
+          <div className="w-3 h-3 rounded-full bg-slate-700" />
+          <div className="w-3 h-3 rounded-full bg-slate-700" />
           <div className="flex-1 flex justify-center">
               <div className="text-xs text-slate-500 font-mono">
-                <ScrambledText text="Corpo VPN — HQ Dashboard" speed={30} />
+                <ScrambledText text="Corpo VPN — Dashboard" speed={30} />
               </div>
           </div>
         </div>
         {/* App body */}
-        <div className="flex bg-dark-900/95 relative overflow-hidden">
-          {/* Subtle cursor effect inside the mockup area using BlobCursor */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0">
-             <BlobCursor 
-                blobType="circle"
-                fillColor="rgba(0, 245, 255, 0.15)"
-                trailCount={2}
-                sizes={[80, 120]}
-                innerSizes={[10, 20]}
-                innerColor="transparent"
-                opacities={[1, 0.5]}
-                shadowBlur={10}
-                filterStdDeviation={20}
-             />
-          </div>
-
+        <div className="flex bg-slate-950 relative overflow-hidden">
           {/* Sidebar */}
-          <div className="w-16 bg-dark-800/80 border-r border-white/5 flex flex-col items-center gap-4 py-5 z-10 relative">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+          <div className="w-16 bg-slate-900/80 border-r border-white/5 flex flex-col items-center gap-4 py-5 z-10 relative">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
               <Shield size={14} className="text-white" />
             </div>
             {['⬜','⬜','⬜','⬜'].map((_, i) => (
               <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center
-                ${i === 0 ? 'bg-cyan-500/20 border border-cyan-500/30' : 'bg-white/5'}`}>
-                <div className={`w-3 h-3 rounded-sm ${i === 0 ? 'bg-cyan-400' : 'bg-slate-600'}`} />
+                ${i === 0 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-white/5'}`}>
+                <div className={`w-3 h-3 rounded-sm ${i === 0 ? 'bg-blue-400' : 'bg-slate-600'}`} />
               </div>
             ))}
           </div>
           {/* Main */}
           <div className="flex-1 p-5 z-10 relative">
             {/* Connect ring mock */}
-            <div className="flex flex-col items-center mb-4">
+            <div className="flex flex-col items-center mb-6 mt-4">
               <div className="relative w-28 h-28 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-2 border-neon-green/40"
-                  style={{ background: 'conic-gradient(#00ff88 100%, rgba(255,255,255,0.05) 0%)' }} />
-                <div className="absolute inset-1 rounded-full bg-dark-900" />
+                <div className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
+                  style={{ background: 'conic-gradient(#10b981 100%, rgba(255,255,255,0.05) 0%)' }} />
+                <div className="absolute inset-[3px] rounded-full bg-slate-950" />
                 <div className="relative z-10 flex flex-col items-center">
-                  <Shield size={20} className="text-neon-green mb-0.5" fill="rgba(0,255,136,0.15)" />
-                  <span className="text-xs font-bold text-neon-green">
-                    <ShinyText baseColor="#00ff88" shineColor="#ffffff" speed="3s">Connected</ShinyText>
+                  <Shield size={20} className="text-emerald-400 mb-1" />
+                  <span className="text-xs font-bold text-emerald-400">
+                    <ShinyText baseColor="#10b981" shineColor="#ffffff" speed="3s">Connected</ShinyText>
                   </span>
                 </div>
               </div>
-              <div className="text-xs text-neon-green font-semibold mt-1" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
-                Protected
-              </div>
             </div>
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-2 gap-3 mb-4">
               {[
-                { label: 'Internal IP', value: '10.200.5.84',    color: 'text-neon-cyan'  },
-                { label: 'Ping',      value: '18 ms',          color: 'text-neon-green' },
-                { label: 'Tunnel',    value: 'IPsec+IKEv2',    color: 'text-blue-400'   },
-                { label: 'Encryption', value: 'AES-256-GCM',   color: 'text-purple-400' },
+                { label: 'Internal IP', value: '10.200.5.84',    color: 'text-blue-400'  },
+                { label: 'Ping',      value: '18 ms',          color: 'text-emerald-400' },
+                { label: 'Tunnel',    value: 'WireGuard',    color: 'text-slate-300'   },
+                { label: 'Encryption', value: 'AES-256-GCM',   color: 'text-slate-300' },
               ].map(({ label, value, color }) => (
-                <div key={label} className="bg-white/5 border border-white/8 rounded-lg p-2">
-                  <div className="text-[10px] text-slate-500">{label}</div>
-                  <div className={`text-[11px] font-semibold font-mono mt-0.5 ${color}`}>{value}</div>
+                <div key={label} className="bg-white/5 border border-white/5 rounded-lg p-3">
+                  <div className="text-xs text-slate-500 mb-1">{label}</div>
+                  <div className={`text-sm font-semibold font-mono ${color}`}>{value}</div>
                 </div>
               ))}
-            </div>
-            {/* Server */}
-            <div className="bg-white/5 border border-white/8 rounded-lg p-3 flex items-center gap-2">
-              <span className="text-lg">🏢</span>
-              <div>
-                <div className="text-[11px] font-semibold text-white">Main HQ · New York</div>
-                <div className="text-[10px] text-slate-500 font-mono">
-                   <ScrambledText text="hq-gw.nexuscorp.internal" speed={60} />
-                </div>
-              </div>
-              <div className="ml-auto flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
-                <span className="text-[10px] text-neon-green">Active</span>
-              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Glow under mockup */}
-      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-64 h-16 rounded-full blur-3xl bg-cyan-500/20" />
+      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-64 h-16 rounded-full blur-3xl bg-blue-500/10 z-0" />
     </div>
   )
 }
@@ -232,12 +100,12 @@ function AnimatedCard({ children, className = "" }) {
     <div
       ref={cardRef}
       onMouseMove={handleMouseMove}
-      className={`relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-6 transition-all duration-500 group hover:-translate-y-1 hover:border-cyan-500/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] ${className}`}
+      className={`relative overflow-hidden bg-slate-900/50 border border-slate-800 hover:border-slate-700 rounded-2xl p-6 transition-all duration-300 group hover:-translate-y-1 hover:shadow-xl ${className}`}
     >
       <div
         className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-hover:opacity-100 z-0"
         style={{
-          background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(6,182,212,0.15), transparent 40%)`,
+          background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(56,189,248,0.08), transparent 40%)`,
         }}
       />
       <div className="relative z-10">{children}</div>
@@ -247,274 +115,134 @@ function AnimatedCard({ children, className = "" }) {
 
 function FeatureCard({ feature }) {
   return (
-    <Magnet strength={0.1}>
-      <AnimatedCard className="h-full">
-        <div className="text-3xl mb-4 transform transition-transform group-hover:scale-110 group-hover:rotate-3 duration-300">{feature.icon}</div>
-        <h3 className="text-base font-semibold text-white mb-2 group-hover:text-neon-cyan transition-colors">{feature.title}</h3>
-        <p className="text-sm text-slate-500 leading-relaxed">{feature.description}</p>
-      </AnimatedCard>
-    </Magnet>
+    <AnimatedCard className="h-full">
+      <div className="text-3xl mb-4 text-blue-400">{feature.icon}</div>
+      <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+      <p className="text-sm text-slate-400 leading-relaxed">{feature.description}</p>
+    </AnimatedCard>
   )
 }
 
 export default function LandingPage() {
   const navigate = useNavigate()
-  const [downloading, setDownloading] = useState(null)
-  const [installing, setInstalling] = useState(null)
-  const [installSuccess, setInstallSuccess] = useState(false)
-
-  const handleDownload = (os) => {
-    if (os === 'Windows') {
-      // Direct download link from GitHub releases
-      window.location.href = "https://github.com/yahiasaad392/corpo-vpn/releases/latest/download/Corpo%20VPN%20Setup%201.0.0.exe";
-      
-      setDownloading(os)
-      setInstallSuccess(false)
-      
-      setTimeout(() => {
-        setDownloading(null)
-        setInstallSuccess(true)
-      }, 2000)
-    } else {
-      alert(`${os} build is not configured in this prototype. Focus on Windows NSIS.`)
-    }
-  }
-
-  const completeInstallation = () => {
-    setInstalling(null)
-    setInstallSuccess(true)
-  }
-
+  
   return (
-    <div className="min-h-screen gradient-mesh overflow-y-auto overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#030712] text-slate-300 font-sans selection:bg-blue-500/30 selection:text-blue-200">
       
-      {/* Global Interactive Cursor Effect */}
-      <GhostCursor 
-        color="#00f5ff" 
-        brightness={1.5} 
-        bloomStrength={0.15} 
-        trailLength={60} 
-        zIndex={1}
-      />
-      
-      {/* Installation Simulation Overlay */}
-      {installing && (
-        <InstallerModal os={installing} onComplete={completeInstallation} />
-      )}
-
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 backdrop-blur-md border-b border-white/5 bg-dark-900/70">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-glow-cyan">
-            <Shield size={15} className="text-white" />
+      {/* Top Nav */}
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#030712]/80 backdrop-blur-md border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+            <Shield size={16} className="text-white" />
           </div>
           <span className="font-bold text-white text-lg tracking-tight">Corpo VPN</span>
         </div>
-        <div className="hidden md:flex items-center gap-6 text-sm text-slate-400">
-          {['Compliance', 'HQ Network', 'Enterprise', 'Support'].map(l => (
-            <a key={l} href="#" className="hover:text-white transition-colors duration-150">{l}</a>
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium">
+          {['Features', 'Architecture', 'Security'].map(l => (
+            <a key={l} href={`#${l.toLowerCase()}`} className="text-slate-400 hover:text-white transition-colors">{l}</a>
           ))}
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 text-xs font-semibold">
-           <Monitor size={14} className="text-cyan-500" />
-           Web Access Only
+        <div className="flex items-center gap-4">
+          <a href="https://github.com/yahiasaad392/corpo-vpn" target="_blank" rel="noreferrer" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
+            <Github size={18} />
+            <span className="hidden sm:inline">GitHub Repo</span>
+          </a>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="relative px-6 pt-24 pb-20 text-center overflow-hidden z-10">
+      {/* Hero Section */}
+      <section className="relative px-6 pt-24 pb-32 text-center overflow-hidden z-10">
         
-        {/* Stunning Orb Background Effect */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] -z-10 opacity-60">
-          <Orb hue={195} hoverIntensity={0.5} rotateOnHover={true} forceHoverState={false} backgroundColor="transparent" />
+        {/* Subtle Orb Background */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] -z-10 opacity-30 pointer-events-none">
+          <Orb hue={210} hoverIntensity={0.2} rotateOnHover={false} backgroundColor="transparent" />
         </div>
 
-        {/* Background glows */}
-        <div className="absolute inset-0 pointer-events-none -z-20">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-cyan-500/8 blur-3xl" />
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-medium mb-8 relative z-10">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <span className="text-blue-300">Enterprise Grade Security • Zero-Trust Ready</span>
         </div>
 
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs mb-8 animate-fade-in relative z-10">
-          <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
-          <ShinyText baseColor="#94a3b8" shineColor="#00f5ff" speed="4s">
-            Enterprise Grade Security · Zero-Trust Ready
-          </ShinyText>
-        </div>
-
-        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 flex flex-wrap justify-center items-center gap-x-4 gap-y-2 relative z-10">
-          <SplitText text="Enterprise VPN" className="text-white" delay={40} />
-          <GradientText colors={['#00f5ff', '#00ff88', '#bf00ff']} className="font-black">
-            <RotatingText words={['Reimagined.', 'Zero Trust.', 'Intelligent.', 'Secured.']} interval={3000} />
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-white leading-tight relative z-10">
+          Zero-Trust Security for <br className="hidden md:block" />
+          <GradientText colors={['#3b82f6', '#8b5cf6', '#3b82f6']} className="inline-block mt-2">
+            The Modern Enterprise.
           </GradientText>
         </h1>
 
-        <ScrollReveal delay={200} className="relative z-10">
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Corpo VPN is a Zero-Trust remote access platform that replaces outdated VPN infrastructure with intelligent, identity-aware secure networking. Powered by WireGuard and real-time device posture validation.
-          </p>
-        </ScrollReveal>
+        <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-light relative z-10">
+          Corpo VPN replaces outdated infrastructure with intelligent, identity-aware secure networking. Powered by blazing fast WireGuard tunnels and real-time device compliance.
+        </p>
 
-        {/* Trust bullets */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-sm relative z-10">
-          {['Compliance Verified', 'AES-256-GCM', 'HQ Gateway Tunnel', 'SAML/MFA Support'].map(item => (
-            <div key={item} className="flex items-center gap-1.5 text-slate-400 group">
-              <CheckCircle size={14} className="text-neon-green group-hover:scale-125 transition-transform" />
-              <ScrambledText text={item} speed={40} scrambleOnHover={true} scrambleOnMount={false} />
-            </div>
-          ))}
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
+          <Magnet strength={0.1}>
+            <a 
+              href="https://github.com/yahiasaad392/corpo-vpn/releases/download/v1.0.0/Corpo.VPN.Setup.1.0.0.exe"
+              className="flex items-center gap-3 px-8 py-4 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:-translate-y-0.5"
+            >
+              <Monitor size={20} />
+              Download for Windows
+            </a>
+          </Magnet>
+          <a 
+            href="https://github.com/yahiasaad392/corpo-vpn"
+            target="_blank" rel="noreferrer"
+            className="flex items-center gap-3 px-8 py-4 rounded-xl bg-slate-800 text-white font-semibold hover:bg-slate-700 transition-colors border border-slate-700"
+          >
+            <Github size={20} />
+            View Source Code
+          </a>
         </div>
+        <p className="mt-4 text-xs text-slate-500 relative z-10 font-medium">Requires Windows 10/11 (64-bit). Version 1.0.0 is live.</p>
 
         {/* App Mockup */}
-        <ScrollReveal delay={400} className="mb-16 animate-float relative z-10">
+        <ScrollReveal delay={200}>
           <DashboardMockup />
         </ScrollReveal>
       </section>
 
-      {/* Download Section */}
-      <section className="px-6 py-16 border-t border-white/5 relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-3">Get Corpo VPN</h2>
-          <p className="text-slate-500 mb-10">Deploy to your workstation for secure remote work access.</p>
-
-          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-8 relative z-20">
-            {[
-              { os: 'Windows', icon: '🪟', sub: 'Windows 10/11 64-bit', color: 'from-blue-600 to-blue-700' },
-              { os: 'macOS',   icon: '🍎', sub: 'macOS 12+ Universal', color: 'from-slate-600 to-slate-700' },
-              { os: 'Linux',   icon: '🐧', sub: '.deb / .rpm / AppImage', color: 'from-orange-600 to-orange-700' },
-            ].map(({ os, icon, sub, color }) => (
-              <Magnet key={os} strength={0.15}>
-                <StarBorder as="div" color="#00f5ff" speed="4s" thickness={2}>
-                  <button
-                    onClick={() => handleDownload(os)}
-                    disabled={downloading !== null}
-                    className={`flex items-center gap-4 w-full h-full text-left
-                      ${downloading === os ? 'opacity-100 scale-95' : downloading ? 'opacity-40 grayscale' : 'hover:opacity-90'} 
-                      transition-all duration-300 group min-w-56`}
-                  >
-                    {downloading === os && (
-                      <div className="absolute inset-0 bg-white/10 animate-pulse flex items-center justify-center rounded-2xl z-20">
-                        <Zap size={24} className="text-white animate-bounce" />
-                      </div>
-                    )}
-                    <span className="text-3xl">{icon}</span>
-                    <div className="flex-1">
-                      <div className="text-white font-semibold">Download for {os}</div>
-                      <div className="text-white/60 text-xs mt-0.5">
-                        {downloading === os ? <ScrambledText text="Fetching..." speed={20} scrambleOnHover={false} /> : sub}
-                      </div>
-                    </div>
-                    <ArrowRight size={16} className={`ml-2 text-white/60 group-hover:translate-x-1 transition-transform ${downloading === os ? 'opacity-0' : ''}`} />
-                  </button>
-                </StarBorder>
-              </Magnet>
-            ))}
-          </div>
-
-          {/* Install Success Message */}
-          {installSuccess && (
-            <div className="mt-8 p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-fade-in inline-block text-left relative z-20">
-              <div className="flex items-center gap-3 text-emerald-400 font-bold text-lg mb-2">
-                <CheckCircle size={24} />
-                <ShinyText baseColor="#34d399" shineColor="#ffffff">Installation Successful!</ShinyText>
-              </div>
-              <p className="text-slate-400 text-sm mb-6">
-                Corpo VPN setup has been verified. <br />
-                <strong>Production Installer Path:</strong> <code className="text-cyan-400 font-mono">/dist-electron/Corpo VPN Setup 1.0.0.exe</code>
-              </p>
-              <div className="flex flex-col gap-3 items-center">
-                <Magnet strength={0.2}>
-                  <button
-                    onClick={() => navigate('/app/dashboard')}
-                    className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600
-                      text-white font-bold hover:shadow-glow-cyan transition-all duration-300 hover:scale-105"
-                  >
-                    <Monitor size={18} />
-                    Launch Development Preview
-                  </button>
-                </Magnet>
-                <p className="text-[10px] text-slate-500 italic">
-                  Note: To generate the actual .exe file, please run <strong>npm run electron:build</strong> in your terminal.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* Features Section */}
-      <section className="px-6 py-16 border-t border-white/5 relative z-10">
-        <div className="absolute top-0 right-0 w-1/3 h-1/2 bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3">
-              <SplitText text="Why Corpo VPN?" delay={30} />
-            </h2>
-            <p className="text-slate-500">Industry-leading secure access for the modern distributed workforce.</p>
+      <section id="features" className="px-6 py-24 bg-slate-950 border-t border-white/5 relative z-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Why Corpo VPN?</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto text-lg">Industry-leading secure access built from the ground up to protect the modern distributed workforce.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {appFeatures.map(f => <FeatureCard key={f.title} feature={f} />)}
-          </div>
-        </div>
-      </section>
-
-      {/* Dev Process Section */}
-      <section className="px-6 py-16 border-t border-white/5 relative z-10">
-        <div className="absolute top-1/2 left-0 w-1/4 h-1/2 bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3">Our Development Process</h2>
-            <p className="text-slate-500">A rigorous engineering approach designed for zero-trust security.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { step: '01', title: 'Architecture & Discovery', desc: 'Designing the zero-trust framework, identifying vulnerability vectors, and establishing WireGuard cryptographic foundations.' },
-              { step: '02', title: 'VPN Infrastructure', desc: 'Deploying automated VPS servers equipped with dynamic IP routing, IPTables masquerading, and auto-scaling peer management.' },
-              { step: '03', title: 'Desktop Client Build', desc: 'Developing the high-performance Electron application for native Windows/macOS integration with built-in compliance scanning.' },
-              { step: '04', title: 'Security Audits & Release', desc: 'Running strict penetration tests, verifying Supabase Auth OTP flows, and persisting immutable system audit logs.' }
-            ].map(item => (
-              <ScrollReveal key={item.step} delay={parseInt(item.step) * 100}>
-                <Magnet strength={0.05}>
-                  <AnimatedCard className="flex gap-6 items-start h-full group">
-                    <div className="text-4xl font-black text-white/5 group-hover:text-cyan-500/20 transition-colors duration-500">
-                       <ScrambledText text={item.step} speed={50} scrambleChars="01" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">{item.title}</h3>
-                      <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
-                    </div>
-                  </AnimatedCard>
-                </Magnet>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {appFeatures.map((f, idx) => (
+              <ScrollReveal key={f.title} delay={idx * 100}>
+                <FeatureCard feature={f} />
               </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* What We Offer Section */}
-      <section className="px-6 py-16 border-t border-white/5 relative overflow-hidden z-10">
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3">What We Offer</h2>
-            <p className="text-slate-500">Enterprise capabilities built into every connection.</p>
+      {/* Architecture Section */}
+      <section id="architecture" className="px-6 py-24 border-t border-white/5 relative z-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Our Development Workflow</h2>
+            <p className="text-slate-400 text-lg">A rigorous engineering approach designed for zero-trust security and high performance.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
-              { icon: '⚡', title: 'Automated Provisioning', desc: 'Zero-touch WireGuard deployment.' },
-              { icon: '🛡️', title: 'Device Compliance', desc: 'Real-time OS posture checks.' },
-              { icon: '📊', title: 'Audit Logging', desc: 'Immutable 7-day security logs.' },
-              { icon: '💻', title: 'Multi-Platform', desc: 'Native client apps for all OS.' }
-            ].map((offer, idx) => (
-              <ScrollReveal key={idx} delay={idx * 100}>
-                <Magnet strength={0.1}>
-                  <AnimatedCard className="text-center h-full group">
-                    <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center text-xl mb-4 group-hover:bg-cyan-500/20 group-hover:scale-110 transition-all duration-300">
-                      {offer.icon}
-                    </div>
-                    <h3 className="text-base font-bold text-white mb-2">{offer.title}</h3>
-                    <p className="text-xs text-slate-500">{offer.desc}</p>
-                  </AnimatedCard>
-                </Magnet>
+              { step: '01', title: 'Architecture & Cryptography', desc: 'Designed the zero-trust framework, established WireGuard cryptographic foundations, and secured Supabase OTP flows.' },
+              { step: '02', title: 'Gateway Infrastructure', desc: 'Deployed automated VPS servers equipped with dynamic IP routing, IPTables masquerading, and auto-scaling peer management.' },
+              { step: '03', title: 'Native Client Build', desc: 'Developed the high-performance Electron application for native OS integration with built-in compliance scanning.' },
+              { step: '04', title: 'Security & Persistence', desc: 'Implemented strict penetration tests and created immutable, 7-day persistent system audit logs on PostgreSQL.' }
+            ].map((item, idx) => (
+              <ScrollReveal key={item.step} delay={idx * 100}>
+                <div className="flex gap-6 items-start p-6 rounded-2xl bg-slate-900/40 border border-slate-800/60">
+                  <div className="text-4xl font-black text-slate-800 select-none">
+                     <ScrambledText text={item.step} speed={50} scrambleChars="01" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-200 mb-2">{item.title}</h3>
+                    <p className="text-slate-400 leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
               </ScrollReveal>
             ))}
           </div>
@@ -522,22 +250,22 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Banner */}
-      <section className="px-6 py-12 border-t border-white/5 border-b border-white/5 z-10 relative">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <section className="px-6 py-16 bg-blue-600 relative z-10 text-white">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: 100, suffix: '+',   label: 'Enterprise Clients' },
-            { value: 99.99, suffix: '%', decimals: 2, label: 'Gateway Uptime'    },
-            { value: 24, suffix: '/7',   label: 'Security Ops'      },
-            { value: 1, prefix: '< ', suffix: 'ms',  label: 'Tunnel Latency'    },
+            { value: 100, suffix: '+',   label: 'Enterprise Deployments' },
+            { value: 99.99, suffix: '%', decimals: 2, label: 'Gateway Uptime' },
+            { value: 24, suffix: '/7',   label: 'Security Operations' },
+            { value: 1, prefix: '< ', suffix: 'ms',  label: 'Tunnel Latency' },
           ].map(({ value, prefix, suffix, decimals, label }) => (
             <div key={label}>
-              <div className="text-3xl font-black neon-text-cyan flex justify-center items-center">
+              <div className="text-4xl font-black mb-2 flex justify-center items-center drop-shadow-sm">
                 {prefix && <span>{prefix}</span>}
                 <CountUp from={0} to={value} decimals={decimals || 0} duration={2000} />
                 {suffix && <span>{suffix}</span>}
               </div>
-              <div className="text-sm text-slate-500 mt-1">
-                <ScrambledText text={label} speed={30} scrambleOnHover={true} />
+              <div className="text-sm text-blue-100 font-medium">
+                {label}
               </div>
             </div>
           ))}
@@ -545,17 +273,20 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 z-10 relative bg-dark-900/50 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <Shield size={14} className="text-cyan-500" />
-          <span className="text-sm text-slate-600">
-             <ShinyText baseColor="#475569" shineColor="#94a3b8" speed="5s">© 2026 Corpo VPN. Internal Use Only.</ShinyText>
-          </span>
-        </div>
-        <div className="flex gap-6 text-xs text-slate-700">
-          {['Privacy Policy', 'Terms of Service', 'Contact', 'Status'].map(l => (
-            <a key={l} href="#" className="hover:text-slate-400 transition-colors">{l}</a>
-          ))}
+      <footer className="px-6 py-12 bg-[#02050a] border-t border-slate-900 z-10 relative">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <Shield size={18} className="text-blue-500" />
+            <span className="font-bold text-white text-lg">Corpo VPN</span>
+          </div>
+          <p className="text-slate-500 text-sm">
+             © 2026 Corpo VPN Graduation Project. Built for enterprise.
+          </p>
+          <div className="flex gap-6">
+            <a href="https://github.com/yahiasaad392/corpo-vpn" target="_blank" rel="noreferrer" className="text-slate-500 hover:text-white transition-colors">
+               <Github size={20} />
+            </a>
+          </div>
         </div>
       </footer>
     </div>
